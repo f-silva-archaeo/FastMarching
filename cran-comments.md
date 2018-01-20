@@ -1,3 +1,10 @@
+## Resubmission
+This is a resubmission. In this version I have:
+
+* Changed Description field as requested by reviewer
+
+
+
 ## Test environments
 * local OS X 10.12.6, R 3.4.3
 * local ubuntu 17.10, R 3.4.3
