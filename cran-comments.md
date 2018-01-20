@@ -5,9 +5,21 @@
 
 ## R CMD check results
 
-0 errors | 0 warnings | 0 notes
+0 errors | 0 warnings | 1 notes, as follows
 
-* This is a new release.
+* checking CRAN incoming feasibility ... NOTE
+Maintainer: ‘Fabio Silva <fsilva@iphes.cat>’
+
+New submission
+
+The Description field should not start with the package name,
+  'This package' or similar.
+
+
+* 1. This is a new release.
+
+* 2. The Description field does not start with the package name, 
+but with 'This package', so I don't understand why this note is produced.
 
 ## Reverse dependencies
 
