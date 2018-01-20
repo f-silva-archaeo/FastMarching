@@ -1,0 +1,14 @@
+Package: fastmaRching
+Type: Package
+Title: Fast Marching Method for Modelling Evolving Boundaries
+Version: 1.0.0
+Author: Fabio Silva
+Maintainer: Fabio Silva <fsilva@iphes.cat>
+Description: This package is an R implementation of the Fast Marching Method (FMM) first developed by Sethian (1996) <http://www.pnas.org/content/93/4/1591.short>. Although developed to model evolving boundaries, FMM can and has been used widely in fluid dynamics, image segmentation, to construct Voronoi diagrams, simulate diffusion processes, and calculate shortest-paths.    This algorithm further extends Sethian's by including additive weights, that is by allowing for competing boundaries to start expanding at different times (Silva and Steele 2012) <doi: 10.1142/S0219525911003293>, as well as by allowing for a non-homogeneous domain where each grid cell has its own diffusivity value (Silva and Steele 2014) <doi: 10.1016/j.jas.2014.04.021>. Also included is a spatial implementation making it easier to model dispersal scenarios in geospatial domains as originally envisaged for the study and simulation of prehistoric dispersals. The algorithm is an implementation, and an improvement on, the MATLAB code of Silva and Steele.
+License: GPL (>= 2)
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 6.0.1
+Imports: compiler,
+    sp,
+    raster
