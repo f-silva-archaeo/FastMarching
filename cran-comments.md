@@ -1,7 +1,14 @@
+## Resubmission
+This is a resubmission. In this version I have:
+
+* Changed Description field as requested by reviewer
+
+
 ## Test environments
 * local OS X 10.12.6, R 3.4.3
 * local ubuntu 17.10, R 3.4.3
 * win-builder (devel and release)
+
 
 ## R CMD check results
 
@@ -12,14 +19,9 @@ Maintainer: ‘Fabio Silva <fsilva@iphes.cat>’
 
 New submission
 
-The Description field should not start with the package name,
-  'This package' or similar.
 
+* This is a new release.
 
-* 1. This is a new release.
-
-* 2. The Description field does not start with the package name, 
-but with 'This package', so I don't understand why this note is produced.
 
 ## Reverse dependencies
 
