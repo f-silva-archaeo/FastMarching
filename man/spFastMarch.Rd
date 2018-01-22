@@ -4,7 +4,7 @@
 \alias{spFastMarch}
 \title{Runs the spatial version of the Modified Fast Marching Method}
 \usage{
-spFastMarch(domain, seeds)
+spFastMarch(domain, seeds, spatial.res)
 }
 \arguments{
 \item{domain}{A \code{\link[raster]{raster}} object of chosen dimension
@@ -17,6 +17,9 @@ the incept time and rate-of-spread for each of the n seeds in its data.frame,
  in columns named exactly \emph{incept} (for incept time) and \emph{speed} (
  for rate-of-spread).
 This object will be automatically transformed to the projection of \emph{domain}.}
+
+\item{spatial.res}{(Optional) Spatial resolution of the raster, necessary only
+to correct the rate-of-spread unit. Defaults to that of the raster used for domain.}
 }
 \description{
 This function runs the Modified Fast Marching Method of Silva and Steele
@@ -25,15 +28,18 @@ in the same formats, makin it more convenient for (geo)spatial analyses
 and simulation.
 }
 \examples{
-\dontrun{
-domain <- r # a previously constructed raster
-coords <- cbind(c(-3, 20), c(37, 40)) # WGS84 Coordinates (Lon and Lat) for seeds
-seed.df <- data.frame(incept=c(0,500), speed=c(1,1)) # Incept time and speed for each seed
-seeds <- SpatialPointsDataFrame(coords, seed.df, proj4string=CRS("+proj=longlat +datum=WGS84"))
+library(raster,sp)
+domain <- raster(system.file("external/test.grd", package="raster")) # sample raster
+domain <- domain > 0 # flattening elevation data
+coords <- cbind(c(179000,181200), c(330000, 333000)) # coordinates for seeds
+seed.df <- data.frame(incept=c(0,10), speed=c(.1,.1)) # incept time and speed for each seed
+seeds <- SpatialPointsDataFrame(coords, seed.df, proj4string=crs(domain))
 
 fm <- spFastMarch(domain, seeds)
-plot(fm$T)
-}
+par(mfrow=c(1,3))
+plot(fm$process, main='process')
+plot(fm$arrival.time, main='arrival time')
+plot(fm$cost.distance, main='distance')
 }
 \references{
 Sethian, J.A. (1996), A fast marching level set method for
