@@ -32,7 +32,7 @@ ModFastMarching <- function(domain, seeds, spatial.res=1) {
     if(clock >= min(incept[2,])) {
 # Incepts seeds to initiate processes at incept time ----------------------
 
-            # choose seeds to incept
+      # choose seeds to incept
       seed.id <- incept[1, which.min(incept[2,] - clock)]
       seed.points <- floor( seeds[1:2,seed.id] );  dim(seed.points) <- c(2,length(seed.id))
 
@@ -165,9 +165,17 @@ ModFastMarching <- function(domain, seeds, spatial.res=1) {
 
 # Output ------------------------------------------------------------------
   T <- T * temp.res
+  cdist <- T
+  for (i in 1:NROW(seeds[3,])) {
+    aux <- which(process==i)
+    cdist[aux] <- V[i]*(cdist[aux] - seeds[3,i]*temp.res)
+  }
+
+  T[process==0] <- NA
+  cdist[process==0] <- NA
   process[process==0] <- NA
 
-  out <- list(domain = domain, seeds = seeds, spatial.res = spatial.res, T = T, process = process)
+  out <- list(domain = domain, seeds = seeds, spatial.res = spatial.res, arrival.time = T, process = process, cost.distance = cdist)
   class(out) <- 'fastmaRching'
 
   return(out)
@@ -203,15 +211,34 @@ ModFastMarching <- function(domain, seeds, spatial.res=1) {
 #' grid <- matrix(1,10,10)
 #' seed <- c(5,5,0,1)
 #' fm <- gridFastMarch(grid, seed)
-#' image(fm$T)
+#' image(fm$arrival.time)
 #'
 #' # Two processes with same incept time
 #' seeds <- cbind(c(7,7,0,1),c(2,2,0,1))
 #' fm2 <- gridFastMarch(grid, seeds)
-#' par(mfrow=c(1,2)); image(fm2$process, main='process'); image(fm2$T, main='arrival time')
+#' par(mfrow=c(1,3))
+#' image(fm2$process, main='process')
+#' image(fm2$arrival.time, main='arrival time')
+#' image(fm2$cost.distance, main='distance')
 #'
 #' # Same as before but changing spatial.res parameter
 #' fm3 <- gridFastMarch(grid, seeds, spatial.res=10)
+#'
+#' # Same as before but with a barrier in middle
+#' grid[5,2:9] <- 0
+#' fm4 <- gridFastMarch(grid, seeds, spatial.res=10)
+#' par(mfrow=c(1,3))
+#' image(fm4$process, main='process')
+#' image(fm4$arrival.time, main='arrival time')
+#' image(fm4$cost.distance, main='distance')
+#'
+#' # Same as before but with different incept times and speeds
+#' seeds <- cbind(c(7,7,0,1),c(2,2,1,0.5))
+#' fm5 <- gridFastMarch(grid, seeds, spatial.res=10)
+#' par(mfrow=c(1,3))
+#' image(fm5$process, main='process')
+#' image(fm5$arrival.time, main='arrival time')
+#' image(fm5$cost.distance, main='distance')
 gridFastMarch <- function(domain, seeds, spatial.res=1) {
   compiler::enableJIT(3)
   gFM <- compiler::cmpfun(ModFastMarching)
@@ -235,6 +262,8 @@ gridFastMarch <- function(domain, seeds, spatial.res=1) {
 #'  in columns named exactly \emph{incept} (for incept time) and \emph{speed} (
 #'  for rate-of-spread).
 #' This object will be automatically transformed to the projection of \emph{domain}.
+#' @param spatial.res (Optional) Spatial resolution of the raster, necessary only
+#' to correct the rate-of-spread unit. Defaults to that of the raster used for domain.
 #' @references Sethian, J.A. (1996), A fast marching level set method for
 #' monotonically advancing fronts, \emph{Proc. Natl. Acad. Sci.} 93 (4),
 #' 1591-1595, doi:
@@ -247,25 +276,28 @@ gridFastMarch <- function(domain, seeds, spatial.res=1) {
 #' 609-620, doi: 10.1016/j.jas.2014.04.021
 #' @export
 #' @examples
-#' \dontrun{
-#' domain <- r # a previously constructed raster
-#' coords <- cbind(c(-3, 20), c(37, 40)) # WGS84 Coordinates (Lon and Lat) for seeds
-#' seed.df <- data.frame(incept=c(0,500), speed=c(1,1)) # Incept time and speed for each seed
-#' seeds <- SpatialPointsDataFrame(coords, seed.df, proj4string=CRS("+proj=longlat +datum=WGS84"))
+#' library(raster); library(sp); library(rgdal)
+#' domain <- raster(system.file("external/test.grd", package="raster")) # sample raster
+#' domain <- domain > 0 # flattening elevation data
+#' coords <- cbind(c(179000,181200), c(330000, 333000)) # coordinates for seeds
+#' seed.df <- data.frame(incept=c(0,10), speed=c(.1,.1)) # incept time and speed for each seed
+#' seeds <- SpatialPointsDataFrame(coords, seed.df, proj4string=crs(domain))
 #'
 #' fm <- spFastMarch(domain, seeds)
-#' plot(fm$T)
-#' }
-spFastMarch <- function(domain, seeds) {
+#' par(mfrow=c(1,3))
+#' plot(fm$process, main='process')
+#' plot(fm$arrival.time, main='arrival time')
+#' plot(fm$cost.distance, main='distance')
+spFastMarch <- function(domain, seeds, spatial.res) {
   # Convert Raster to Matrix ------------------------------------------------
-  domain.grid <- as.matrix(domain)
+  domain.grid <- raster::as.matrix(domain)
   domain.grid[is.na(domain.grid)] <- 0
-  spatial.res <- mean(raster::res(domain))/1000  # in km???
+  if (missing(spatial.res)) { spatial.res <- mean(raster::res(domain))/1000 } # in km
 
 
   # Convert SpatialPointsDataFrame to seeds array ---------------------------
   seeds.rp <- sp::spTransform(seeds, raster::crs(domain))
-  seeds.matrix <- as.matrix(raster::rasterize(seeds.rp, domain, background=NA)$ID)
+  seeds.matrix <- raster::as.matrix(raster::rasterize(seeds.rp, domain, background=NA)$ID)
   aux <- t(cbind(seeds.matrix[which(!is.na(seeds.matrix))], which(!is.na(seeds.matrix), arr.ind=TRUE)))
   aux <- rbind(aux, seeds.rp@data$incept, seeds.rp@data$speed); seeds.grid <- aux[-1,]
 
@@ -275,14 +307,16 @@ spFastMarch <- function(domain, seeds) {
 
 
   # Output ------------------------------------------------------------------
-  TT <- raster::raster(fm$T, template=domain)
+  TT <- raster::raster(fm$arrival.time, template=domain)
   pp <- raster::raster(fm$process, template=domain)
+  cc <- raster::raster(fm$cost.distance, template=domain)
 
   fm$seeds <- seeds
   fm$domain <- domain
   fm$spatial.res <- spatial.res
-  fm$T <- TT
+  fm$arrival.time <- TT
   fm$process <- pp
+  fm$cost.distance <- cc
 
   return(fm)
 }

@@ -1,7 +1,8 @@
 ## Resubmission
 This is a resubmission. In this version I have:
 
-* Changed Description field as requested by reviewer
+* Changed Description field as requested by reviewer (removed blank after doi:)
+* Added example to function spFastMarch() as requested by reviewer
 
 
 ## Test environments
