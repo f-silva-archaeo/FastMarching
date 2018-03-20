@@ -1,8 +1,8 @@
-## Resubmission
-This is a resubmission. In this version I have:
+This is a minor release that fixes an important bug with the previous version. 
 
-* Changed Description field as requested by reviewer (removed blank after doi:)
-* Added example to function spFastMarch() as requested by reviewer
+In this version I have:
+
+* fixed issue with order of magnitude of cost distance estimation
 
 
 ## Test environments
@@ -13,20 +13,12 @@ This is a resubmission. In this version I have:
 
 ## R CMD check results
 
-0 errors | 0 warnings | 1 notes, as follows
-
-* checking CRAN incoming feasibility ... NOTE
-Maintainer: ‘Fabio Silva <fsilva@iphes.cat>’
-
-New submission
-
-
-* This is a new release.
+0 errors | 0 warnings | 0 notes
 
 
 ## Reverse dependencies
 
-This is a new release, so there are no reverse dependencies.
+This is a minor release with no changes that will affect reverse dependencies.
 
 ---
 
