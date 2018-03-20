@@ -6,8 +6,8 @@ In this version I have:
 
 
 ## Test environments
-* local OS X 10.12.6, R 3.4.3
-* local ubuntu 17.10, R 3.4.3
+* local OS X 10.12.6, R 3.4.4
+* local ubuntu 17.10, R 3.4.4
 * win-builder (devel and release)
 
 
