@@ -1,3 +1,7 @@
+[![cran version](http://www.r-pkg.org/badges/version/fastmaRching)](https://cran.rstudio.com/web/packages/fastmaRching) 
+[![rstudio mirror downloads](http://cranlogs.r-pkg.org/badges/fastmaRching?)](https://github.com/metacran/cranlogs.app)
+[![rstudio mirror downloads](http://cranlogs.r-pkg.org/badges/grand-total/fastmaRching?color=82b4e8)](https://github.com/metacran/cranlogs.app)
+
 # fastmaRching
 This package is an R implementation of the Fast Marching Method (FMM) first 
 developed by Sethian (1996). Although developed to model evolving boundaries, FMM can and 
