@@ -26,8 +26,9 @@ ModFastMarching <- function(domain, seeds, spatial.res=1) {
 
 
 # Fast Marching Run -------------------------------------------------------
+  F1 <- length(which(Frozen==1))
+  pb <- txtProgressBar(max=length(which(Frozen==0)), style=3)
   while(Narrow_id > -1) {
-
 
     if(clock >= min(incept[2,])) {
 # Incepts seeds to initiate processes at incept time ----------------------
@@ -160,6 +161,7 @@ ModFastMarching <- function(domain, seeds, spatial.res=1) {
         }
       }
     }
+    setTxtProgressBar(pb, length(which(Frozen==1))-F1)
   }
 
 
@@ -300,6 +302,12 @@ spFastMarch <- function(domain, seeds, spatial.res) {
   seeds.matrix <- raster::as.matrix(raster::rasterize(seeds.rp, domain, background=NA)$ID)
   aux <- t(cbind(seeds.matrix[which(!is.na(seeds.matrix))], which(!is.na(seeds.matrix), arr.ind=TRUE)))
   aux <- rbind(aux, seeds.rp@data$incept, seeds.rp@data$speed); seeds.grid <- aux[-1,]
+
+
+
+  # Check if seeds are inside domain ----------------------------------------
+  test <- extract(domain, seeds.rp); length(which(test==0 | is.na(test)))>0
+  if (length(which(test==0 | is.na(test)))>0) { stop('Seed(s) not inside valid domain. Please check and rerun.') }
 
 
   # Run Fast Marching Method ------------------------------------------------
