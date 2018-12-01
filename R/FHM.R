@@ -1,22 +1,38 @@
-#' Gridded Modified Fast Marching Method
-#' @noRd
-ModFastMarching <- function(domain, seeds, spatial.res=1) {
+#' Tobler's Hiking Speed Function
+#' @export
+hiking.speed <- function(slope, off.path=F, horseback=F, cutoff) {
+  # slope <- tan(slope/180*pi)
+  factor <- 6
+  if (off.path) { factor <- factor * 3/5 }
+  if (horseback) { factor <- factor * 5/4 }
 
-# Initializations ---------------------------------------------------------
+  speed <- factor * exp(-3.5 * abs(slope + 0.05))
+  if (!missing(cutoff)) { speed[slope > cutoff] <- 0 }
+
+  return(speed)
+}
+
+# dist <- rbind(c(sqrt(2),1,sqrt(2)),c(1,0,1),c(sqrt(2),1,sqrt(2))) # must be multiplied by spatial.res
+
+#' Gridded Modified Fast Hiking Method
+#' @noRd
+ModFastHiking <- function(domain, seeds, spatial.res=1) {
+
+  # Initializations ---------------------------------------------------------
   temp.res <- 1000    # temporal resolution
   Narrow_free <- 100000; Narrow_id <- 0; Narrow_list <- array(0,c(4,Narrow_free))   # Narrow Band arrays
   ne <- rbind(c(-1,0),c(1,0),c(0,-1),c(0,1))    # neighbour pixels
   clock <- 0    # external clock for seed inception
 
 
-# Seed cleanup ------------------------------------------------------------
+  # Seed cleanup ------------------------------------------------------------
   dim(seeds) <- c(NROW(seeds), NCOL(seeds))
   seeds[3,] <- seeds[3,]/temp.res
   V <- seeds[4,]*(temp.res/spatial.res)
   incept <- matrix(c(1:(ncol(seeds)+1),c(seeds[3,],Inf)), nrow=2, byrow=TRUE) # incept times for seeds
 
 
-# Intialization of Fast Marching grids ------------------------------------
+  # Intialization of Fast Hiking grids ------------------------------------
   Map <- domain
   gridsize <- dim(Map)
   T <- array(0,c(gridsize[1],gridsize[2]))
@@ -25,13 +41,13 @@ ModFastMarching <- function(domain, seeds, spatial.res=1) {
   Frozen <- Map==0
 
 
-# Fast Marching Run -------------------------------------------------------
+  # Fast Hiking Run -------------------------------------------------------
   F1 <- length(which(Frozen==1))
   pb <- txtProgressBar(max=length(which(Frozen==0)), style=3)
   while(Narrow_id > -1) {
 
     if(clock >= min(incept[2,])) {
-# Incepts seeds to initiate processes at incept time ----------------------
+      # Incepts seeds to initiate processes at incept time ----------------------
 
       # choose seeds to incept
       seed.id <- incept[1, which.min(incept[2,] - clock)]
@@ -50,7 +66,9 @@ ModFastMarching <- function(domain, seeds, spatial.res=1) {
 
           if ((i > 0) && (j > 0) && (i <= dim(T)[1]) && (j <= dim(T)[2]) && (Frozen[i,j]==0)) {
             process[i,j] <- process[x[kk], y[kk]]
-            Tt <- seeds[3,seed.id] + 1/(V[process[i,j]]*Map[i,j]+.Machine$double.eps)
+            slope <- (Map[x[kk],y[kk]] - Map[i,j]) / (spatial.res*1000)
+            speed <- hiking.speed(slope)*(temp.res/spatial.res)
+            Tt <- seeds[3,seed.id] + 1/(speed)
 
             if (T[i,j] > 0) {
               Narrow_list[1,T[i,j]] <- min(Re(Tt),Narrow_list[1,T[i,j]])
@@ -135,18 +153,24 @@ ModFastMarching <- function(domain, seeds, spatial.res=1) {
         if(ch2) { Tm2[4] <- (4*Tpatch[4,2] - Tpatch[5,1])/3; Order[4] <- 2 }
         if(ch1&&ch2) { Tm2[4] <- min((4*Tpatch[2,4] - Tpatch[1,5])/3, (4*Tpatch[4,2] - Tpatch[5,1])/3); Order[4] <- 2}
 
+        # NEW calculates hiking speed to all neighbours
+        # slope <- (Map[x,y] - Map[i,j]) / (dist * spatial.res)
+        slope <- (Map[x,y] - Map[i,j]) / (spatial.res*1000)
+        speed <- hiking.speed(slope)*(temp.res/spatial.res)
+
         # calculates the distance using x-y and cross directions only
-        Coeff <- c(0, 0, -1/((V[process[x,y]]*Map[i,j])^2));
+        # Coeff <- c(0, 0, -1/((V[process[x,y]]*Map[i,j])^2));
+        Coeff <- c(0, 0, -1/(speed^2));
         for (t in 1:2) { if(Order[t] > 0) { Coeff <- switch(Order[t], Coeff+c(1, -2*Tm[t], Tm[t]^2), Coeff+c(1, -2*Tm2[t], Tm2[t]^2)*9/4) }}
         Tt <- polyroot(rev(Coeff)); Tt <- max(Re(Tt))
-        Coeff <- c(0, 0, -1/((V[process[x,y]]*Map[i,j])^2));
+        Coeff <- c(0, 0, -1/(speed^2));
         for (t in 3:4) { if(Order[t] > 0) { Coeff <- switch(Order[t], Coeff+0.5*c(1, -2*Tm[t], Tm[t]^2), Coeff+0.5*c(1, -2*Tm2[t], Tm2[t]^2)*9/4) }}
         Tt2 <- polyroot(rev(Coeff))
 
         # Check for upwind condition
         if(length(Tt2) > 0) { Tt2 <- max(Re(Tt2)); Tt <- min(Tt,Tt2) }
         DirectNeigbInSol <- Tm[is.finite(Tm)]
-        if(length(which(DirectNeigbInSol>=Tt)) > 0) { Tt <- min(DirectNeigbInSol) + 1/((V[process[x,y]]*Map[i,j])) }
+        if(length(which(DirectNeigbInSol>=Tt)) > 0) { Tt <- min(DirectNeigbInSol) + 1/(speed) }
 
         # Updates Narrow Band array
         if(T[i,j] > 0) {
@@ -165,7 +189,7 @@ ModFastMarching <- function(domain, seeds, spatial.res=1) {
   }
 
 
-# Output ------------------------------------------------------------------
+  # Output ------------------------------------------------------------------
   T <- T * temp.res
   cdist <- T
   for (i in 1:NROW(seeds[3,])) {
@@ -186,17 +210,17 @@ ModFastMarching <- function(domain, seeds, spatial.res=1) {
 
 
 
-#' Runs the grid version of the Modified Fast Marching Method
+#' Runs the grid version of the Modified Fast Hiking Method
 #'
-#' This function runs the Modified Fast Marching Method of Silva and Steele
-#' (2012,2014) on a gridded domain.
+#' This function runs the Modified Fast Hiking Method of xxxx
+#' on a gridded domain. Output arrival time is in hours.
 #' @param domain Grid (matrix) of chosen dimension with diffusivity values
 #'  for every grid cell. Values above 1 will boost diffusivity, below 1 will
 #'  inhibit it. Values of 0 should mark cells that block diffusion.
 #' @param seeds A (4 x n) array containing the x-coordinate, y-coordinate,
 #' incept time and rate-of-spread for each of the n seeds.
-#' @param spatial.res (Optional) Spatial resolution of the grid, necessary only
-#' to correct the rate-of-spread unit. See example below. Defaults to 1.
+#' @param spatial.res (Optional) Spatial resolution of the grid in metre.
+#' See example below. Defaults to 1 metre.
 #' @references Sethian, J.A. (1996), A fast marching level set method for
 #' monotonically advancing fronts, \emph{Proc. Natl. Acad. Sci.} 93 (4),
 #' 1591-1595.
@@ -212,23 +236,23 @@ ModFastMarching <- function(domain, seeds, spatial.res=1) {
 #' # Single process
 #' grid <- matrix(1,10,10)
 #' seed <- c(5,5,0,1)
-#' fm <- gridFastMarch(grid, seed)
+#' fm <- gridFastHike(grid, seed)
 #' image(fm$arrival.time)
 #'
 #' # Two processes with same incept time
 #' seeds <- cbind(c(7,7,0,1),c(2,2,0,1))
-#' fm2 <- gridFastMarch(grid, seeds)
+#' fm2 <- gridFastHike(grid, seeds)
 #' par(mfrow=c(1,3))
 #' image(fm2$process, main='process')
 #' image(fm2$arrival.time, main='arrival time')
 #' image(fm2$cost.distance, main='distance')
 #'
 #' # Same as before but changing spatial.res parameter
-#' fm3 <- gridFastMarch(grid, seeds, spatial.res=10)
+#' fm3 <- gridFastHike(grid, seeds, spatial.res=10)
 #'
 #' # Same as before but with a barrier in middle
 #' grid[5,2:9] <- 0
-#' fm4 <- gridFastMarch(grid, seeds, spatial.res=10)
+#' fm4 <- gridFastHike(grid, seeds, spatial.res=10)
 #' par(mfrow=c(1,3))
 #' image(fm4$process, main='process')
 #' image(fm4$arrival.time, main='arrival time')
@@ -236,36 +260,34 @@ ModFastMarching <- function(domain, seeds, spatial.res=1) {
 #'
 #' # Same as before but with different incept times and speeds
 #' seeds <- cbind(c(7,7,0,1),c(2,2,1,0.5))
-#' fm5 <- gridFastMarch(grid, seeds, spatial.res=10)
+#' fm5 <- gridFastHike(grid, seeds, spatial.res=10)
 #' par(mfrow=c(1,3))
 #' image(fm5$process, main='process')
 #' image(fm5$arrival.time, main='arrival time')
 #' image(fm5$cost.distance, main='distance')
-gridFastMarch <- function(domain, seeds, spatial.res=1) {
+gridFastHike <- function(domain, seeds, spatial.res=1) {
   compiler::enableJIT(3)
-  gFM <- compiler::cmpfun(ModFastMarching)
-  return(gFM(domain, seeds, spatial.res))
+  gFH <- compiler::cmpfun(ModFastHiking)
+  return(gFH(domain, seeds, spatial.res))
 }
 
 
 
-#' Runs the spatial version of the Modified Fast Marching Method
+#' Runs the spatial version of the Modified Fast Hiking Method
 #'
-#' This function runs the Modified Fast Marching Method of Silva and Steele
-#' (2012,2014) from \emph{sp} and \emph{raster} objects and outputs results
+#' This function runs the Modified Fast Hiking Method of xxxxxxx
+#'  from \emph{sp} and \emph{raster} objects and outputs results
 #' in the same formats, makin it more convenient for (geo)spatial analyses
-#' and simulation.
-#' @param domain A \code{\link[raster]{raster}} object of chosen dimension
-#' and resolution with diffusivity values for every cell. Values above 1 will
-#'  boost diffusivity, below 1 will inhibit it. Values of 0 should mark cells
-#'  that block diffusion.
+#' and simulation. Output arrival time is in hours.
+#' @param dem A \code{\link[raster]{raster}} object of chosen dimension
+#' and resolution with elevation data.
 #' @param seeds A \code{\link[sp]{SpatialPointsDataFrame}} object containing
 #' the incept time and rate-of-spread for each of the n seeds in its data.frame,
 #'  in columns named exactly \emph{incept} (for incept time) and \emph{speed} (
 #'  for rate-of-spread).
 #' This object will be automatically transformed to the projection of \emph{domain}.
-#' @param spatial.res (Optional) Spatial resolution of the raster, necessary only
-#' to correct the rate-of-spread unit. Defaults to that of the raster used for domain.
+#' @param spatial.res (Optional) Spatial resolution of the raster in metres.
+#' Defaults to that of the raster used for DEM
 #' @references Sethian, J.A. (1996), A fast marching level set method for
 #' monotonically advancing fronts, \emph{Proc. Natl. Acad. Sci.} 93 (4),
 #' 1591-1595, doi:
@@ -280,47 +302,46 @@ gridFastMarch <- function(domain, seeds, spatial.res=1) {
 #' @examples
 #' library(raster); library(sp); library(rgdal)
 #' domain <- raster(system.file("external/test.grd", package="raster")) # sample raster
-#' domain <- domain > 0 # flattening elevation data
 #' coords <- cbind(c(179000,181200), c(330000, 333000)) # coordinates for seeds
 #' seed.df <- data.frame(incept=c(0,10), speed=c(.1,.1)) # incept time and speed for each seed
 #' seeds <- SpatialPointsDataFrame(coords, seed.df, proj4string=crs(domain))
 #'
-#' fm <- spFastMarch(domain, seeds)
+#' fm <- spFastHike(domain, seeds)
 #' par(mfrow=c(1,3))
 #' plot(fm$process, main='process')
 #' plot(fm$arrival.time, main='arrival time')
 #' plot(fm$cost.distance, main='distance')
-spFastMarch <- function(domain, seeds, spatial.res) {
+spFastHike <- function(dem, seeds, spatial.res) {
   # Convert Raster to Matrix ------------------------------------------------
-  domain.grid <- raster::as.matrix(domain)
+  domain.grid <- raster::as.matrix(dem)
   domain.grid[is.na(domain.grid)] <- 0
-  if (missing(spatial.res)) { spatial.res <- mean(raster::res(domain))/1000 } # in km
+  if (missing(spatial.res)) { spatial.res <- mean(raster::res(dem))/1000 } # in km
 
 
   # Convert SpatialPointsDataFrame to seeds array ---------------------------
-  seeds.rp <- sp::spTransform(seeds, raster::crs(domain))
-  seeds.matrix <- raster::as.matrix(raster::rasterize(seeds.rp, domain, background=NA)$ID)
+  seeds.rp <- sp::spTransform(seeds, raster::crs(dem))
+  seeds.matrix <- raster::as.matrix(raster::rasterize(seeds.rp, dem, background=NA)$ID)
   aux <- t(cbind(seeds.matrix[which(!is.na(seeds.matrix))], which(!is.na(seeds.matrix), arr.ind=TRUE)))
   aux <- rbind(aux, seeds.rp@data$incept, seeds.rp@data$speed); seeds.grid <- aux[-1,]
 
 
 
   # Check if seeds are inside domain ----------------------------------------
-  test <- extract(domain, seeds.rp); length(which(test==0 | is.na(test)))>0
+  test <- extract(dem, seeds.rp); length(which(test==0 | is.na(test)))>0
   if (length(which(test==0 | is.na(test)))>0) { stop('Seed(s) not inside valid domain. Please check and rerun.') }
 
 
-  # Run Fast Marching Method ------------------------------------------------
-  fm <- gridFastMarch(domain.grid, seeds.grid, spatial.res)
+  # Run Fast Hiking Method ------------------------------------------------
+  fm <- gridFastHike(domain.grid, seeds.grid, spatial.res)
 
 
   # Output ------------------------------------------------------------------
-  TT <- raster::raster(fm$arrival.time, template=domain)
-  pp <- raster::raster(fm$process, template=domain)
-  cc <- raster::raster(fm$cost.distance, template=domain)
+  TT <- raster::raster(fm$arrival.time, template=dem)
+  pp <- raster::raster(fm$process, template=dem)
+  cc <- raster::raster(fm$cost.distance, template=dem)
 
   fm$seeds <- seeds
-  fm$domain <- domain
+  fm$domain <- dem
   fm$spatial.res <- spatial.res
   fm$arrival.time <- TT
   fm$process <- pp
