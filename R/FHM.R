@@ -28,7 +28,9 @@ ModFastHiking <- function(domain, seeds, spatial.res=1) {
   # Seed cleanup ------------------------------------------------------------
   dim(seeds) <- c(NROW(seeds), NCOL(seeds))
   seeds[3,] <- seeds[3,]/temp.res
-  V <- seeds[4,]*(temp.res/spatial.res)
+  V <- 1 # unneeded
+  off.path <- seeds[5,]==1
+  horseback <- seeds[6,]==1
   incept <- matrix(c(1:(ncol(seeds)+1),c(seeds[3,],Inf)), nrow=2, byrow=TRUE) # incept times for seeds
 
 
@@ -67,7 +69,7 @@ ModFastHiking <- function(domain, seeds, spatial.res=1) {
           if ((i > 0) && (j > 0) && (i <= dim(T)[1]) && (j <= dim(T)[2]) && (Frozen[i,j]==0)) {
             process[i,j] <- process[x[kk], y[kk]]
             slope <- (Map[x[kk],y[kk]] - Map[i,j]) / (spatial.res*1000)
-            speed <- hiking.speed(slope)*(temp.res/spatial.res)
+            speed <- hiking.speed(slope, off.path[process[i,j]], horseback[process[i,j]])*(temp.res/spatial.res)
             Tt <- seeds[3,seed.id] + 1/(speed)
 
             if (T[i,j] > 0) {
@@ -153,10 +155,9 @@ ModFastHiking <- function(domain, seeds, spatial.res=1) {
         if(ch2) { Tm2[4] <- (4*Tpatch[4,2] - Tpatch[5,1])/3; Order[4] <- 2 }
         if(ch1&&ch2) { Tm2[4] <- min((4*Tpatch[2,4] - Tpatch[1,5])/3, (4*Tpatch[4,2] - Tpatch[5,1])/3); Order[4] <- 2}
 
-        # NEW calculates hiking speed to all neighbours
-        # slope <- (Map[x,y] - Map[i,j]) / (dist * spatial.res)
+        # calculates hiking speed to all neighbours
         slope <- (Map[x,y] - Map[i,j]) / (spatial.res*1000)
-        speed <- hiking.speed(slope)*(temp.res/spatial.res)
+        speed <- hiking.speed(slope, off.path[process[x,y]], horseback[process[x,y]])*(temp.res/spatial.res)
 
         # calculates the distance using x-y and cross directions only
         # Coeff <- c(0, 0, -1/((V[process[x,y]]*Map[i,j])^2));
@@ -303,7 +304,7 @@ gridFastHike <- function(domain, seeds, spatial.res=1) {
 #' library(raster); library(sp); library(rgdal)
 #' domain <- raster(system.file("external/test.grd", package="raster")) # sample raster
 #' coords <- cbind(c(179000,181200), c(330000, 333000)) # coordinates for seeds
-#' seed.df <- data.frame(incept=c(0,10), speed=c(.1,.1)) # incept time and speed for each seed
+#' seed.df <- data.frame(incept=c(0,10), off.track=c(F,F), horseback=c(F,F)) # incept time and speed for each seed
 #' seeds <- SpatialPointsDataFrame(coords, seed.df, proj4string=crs(domain))
 #'
 #' fm <- spFastHike(domain, seeds)
@@ -322,8 +323,7 @@ spFastHike <- function(dem, seeds, spatial.res) {
   seeds.rp <- sp::spTransform(seeds, raster::crs(dem))
   seeds.matrix <- raster::as.matrix(raster::rasterize(seeds.rp, dem, background=NA)$ID)
   aux <- t(cbind(seeds.matrix[which(!is.na(seeds.matrix))], which(!is.na(seeds.matrix), arr.ind=TRUE)))
-  aux <- rbind(aux, seeds.rp@data$incept, seeds.rp@data$speed); seeds.grid <- aux[-1,]
-
+  aux <- rbind(aux, seeds.rp@data$incept, c(1,1), seeds.rp@data$off.track, seeds.rp@data$horseback); seeds.grid <- aux[-1,]
 
 
   # Check if seeds are inside domain ----------------------------------------
