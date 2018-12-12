@@ -27,7 +27,7 @@ ModFastMarching <- function(domain, seeds, spatial.res=1) {
 
 # Fast Marching Run -------------------------------------------------------
   F1 <- length(which(Frozen==1))
-  pb <- txtProgressBar(max=length(which(Frozen==0)), style=3)
+  pb <- utils::txtProgressBar(max=length(which(Frozen==0)), style=3)
   while(Narrow_id > -1) {
 
     if(clock >= min(incept[2,])) {
@@ -161,7 +161,7 @@ ModFastMarching <- function(domain, seeds, spatial.res=1) {
         }
       }
     }
-    setTxtProgressBar(pb, length(which(Frozen==1))-F1)
+    utils::setTxtProgressBar(pb, length(which(Frozen==1))-F1)
   }
 
 
@@ -253,7 +253,7 @@ gridFastMarch <- function(domain, seeds, spatial.res=1) {
 #'
 #' This function runs the Modified Fast Marching Method of Silva and Steele
 #' (2012,2014) from \emph{sp} and \emph{raster} objects and outputs results
-#' in the same formats, makin it more convenient for (geo)spatial analyses
+#' in the same formats, making it more convenient for (geo)spatial analyses
 #' and simulation.
 #' @param domain A \code{\link[raster]{raster}} object of chosen dimension
 #' and resolution with diffusivity values for every cell. Values above 1 will
@@ -306,7 +306,7 @@ spFastMarch <- function(domain, seeds, spatial.res) {
 
 
   # Check if seeds are inside domain ----------------------------------------
-  test <- extract(domain, seeds.rp); length(which(test==0 | is.na(test)))>0
+  test <- raster::extract(domain, seeds.rp); length(which(test==0 | is.na(test)))>0
   if (length(which(test==0 | is.na(test)))>0) { stop('Seed(s) not inside valid domain. Please check and rerun.') }
 
 
