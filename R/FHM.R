@@ -400,6 +400,7 @@ spFastHike <- function(dem, seeds, spatial.res, fun='Tobler') {
   seeds.rp <- sp::spTransform(seeds, raster::crs(dem))
   seeds.matrix <- raster::as.matrix(raster::rasterize(seeds.rp, dem, background=NA)$ID)
   aux <- t(cbind(seeds.matrix[which(!is.na(seeds.matrix))], which(!is.na(seeds.matrix), arr.ind=TRUE))); aux <- aux[-1,]
+  dim(aux) <- c(NROW(aux), NCOL(aux))
   seeds.grid <- data.frame(row=aux[1,], col=aux[2,], incept=seeds.rp@data$incept)
   if ("v0" %in% names(seeds.rp@data)) { seeds.grid$v0 <- seeds.rp@data$v0 }
   if ("off.path" %in% names(seeds.rp@data)) { seeds.grid$off.path <- seeds.rp@data$off.path }
