@@ -308,7 +308,7 @@ ModFastHiking <- function(domain, seeds, spatial.res=1, fun) {
 
 
 
-#' Runs the grid version of the Modified Fast Hiking Method
+#' Modified Fast Hiking Method on a gridded domain
 #'
 #' This function runs the Modified Fast Hiking Method on a gridded domain.
 #' Output arrival time is in hours.
@@ -362,7 +362,7 @@ gridFastHike <- function(domain, seeds, spatial.res=1, fun='Tobler') {
 
 
 
-#' Runs the spatial version of the Modified Fast Hiking Method
+#' Modified Fast Hiking Method on a spatial domain
 #'
 #' This function runs the Modified Fast Hiking Method from \emph{sp} and
 #' \emph{raster} objects and outputs results in the same formats, making
@@ -387,8 +387,8 @@ gridFastHike <- function(domain, seeds, spatial.res=1, fun='Tobler') {
 #' seeds <- SpatialPointsDataFrame(coords, seed.df, proj4string=crs(domain))
 #'
 #' fm <- spFastHike(domain, seeds)
-# plot(domain)
-# contour(fm$arrival.time, levels=seq(1,5,1), add=T)
+#  plot(domain)
+#  contour(fm$arrival.time, levels=seq(1,5,1), add=T)
 spFastHike <- function(dem, seeds, spatial.res, fun='Tobler') {
   # Convert Raster to Matrix ------------------------------------------------
   domain.grid <- raster::as.matrix(dem)

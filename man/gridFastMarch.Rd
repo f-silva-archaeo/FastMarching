@@ -2,7 +2,7 @@
 % Please edit documentation in R/FMM.R
 \name{gridFastMarch}
 \alias{gridFastMarch}
-\title{Runs the grid version of the Modified Fast Marching Method}
+\title{Modified Fast Marching Method on a gridded domain}
 \usage{
 gridFastMarch(domain, seeds, spatial.res = 1)
 }

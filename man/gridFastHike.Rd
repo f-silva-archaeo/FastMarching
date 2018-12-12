@@ -2,7 +2,7 @@
 % Please edit documentation in R/FHM.R
 \name{gridFastHike}
 \alias{gridFastHike}
-\title{Runs the grid version of the Modified Fast Hiking Method}
+\title{Modified Fast Hiking Method on a gridded domain}
 \usage{
 gridFastHike(domain, seeds, spatial.res = 1, fun = "Tobler")
 }

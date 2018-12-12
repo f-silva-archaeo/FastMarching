@@ -2,6 +2,8 @@
 
 export(gridFastHike)
 export(gridFastMarch)
+export(gridSpath)
 export(hiking.speed)
 export(spFastHike)
 export(spFastMarch)
+export(spSpath)

@@ -2,7 +2,7 @@
 % Please edit documentation in R/FHM.R
 \name{spFastHike}
 \alias{spFastHike}
-\title{Runs the spatial version of the Modified Fast Hiking Method}
+\title{Modified Fast Hiking Method on a spatial domain}
 \usage{
 spFastHike(dem, seeds, spatial.res, fun = "Tobler")
 }

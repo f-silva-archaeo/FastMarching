@@ -2,7 +2,7 @@
 % Please edit documentation in R/FMM.R
 \name{spFastMarch}
 \alias{spFastMarch}
-\title{Runs the spatial version of the Modified Fast Marching Method}
+\title{Modified Fast Marching Method on a spatial domain}
 \usage{
 spFastMarch(domain, seeds, spatial.res)
 }

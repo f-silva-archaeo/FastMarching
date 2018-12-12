@@ -186,7 +186,7 @@ ModFastMarching <- function(domain, seeds, spatial.res=1) {
 
 
 
-#' Runs the grid version of the Modified Fast Marching Method
+#' Modified Fast Marching Method on a gridded domain
 #'
 #' This function runs the Modified Fast Marching Method of Silva and Steele
 #' (2012,2014) on a gridded domain.
@@ -249,7 +249,7 @@ gridFastMarch <- function(domain, seeds, spatial.res=1) {
 
 
 
-#' Runs the spatial version of the Modified Fast Marching Method
+#' Modified Fast Marching Method on a spatial domain
 #'
 #' This function runs the Modified Fast Marching Method of Silva and Steele
 #' (2012,2014) from \emph{sp} and \emph{raster} objects and outputs results
