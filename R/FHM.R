@@ -292,7 +292,7 @@ ModFastHiking <- function(domain, seeds, spatial.res=1, fun) {
   cdist <- T
   for (i in 1:NROW(seeds[3,])) {
     aux <- which(process==i)
-    cdist[aux] <- spatial.res*V[i]*(cdist[aux] - seeds[3,i]*temp.res)
+    cdist[aux] <- spatial.res*(cdist[aux] - seeds[3,i]*temp.res)
   }
 
   T[process==0] <- NA
