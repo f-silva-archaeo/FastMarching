@@ -24,7 +24,7 @@ to correct the rate-of-spread unit. Defaults to that of the raster used for doma
 \description{
 This function runs the Modified Fast Marching Method of Silva and Steele
 (2012,2014) from \emph{sp} and \emph{raster} objects and outputs results
-in the same formats, makin it more convenient for (geo)spatial analyses
+in the same formats, making it more convenient for (geo)spatial analyses
 and simulation.
 }
 \examples{

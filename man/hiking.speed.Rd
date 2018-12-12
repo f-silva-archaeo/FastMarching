@@ -2,10 +2,60 @@
 % Please edit documentation in R/FHM.R
 \name{hiking.speed}
 \alias{hiking.speed}
-\title{Tobler's Hiking Speed Function}
+\title{Hiking Speed Function(s)}
 \usage{
-hiking.speed(slope, off.path = F, horseback = F, cutoff)
+hiking.speed(slope, units = "degree", fun = "Tobler", v0 = NULL,
+  off.path = F, horseback = F, cutoff)
+}
+\arguments{
+\item{slope}{Slope values in either degrees, radians or unitless. Can be array,
+matrix or raster object.}
+
+\item{units}{(Optional) Either 'degree', 'radian' or 'nounit'. Default is 'degree'.}
+
+\item{fun}{(Optional) Hiking function. Either 'Tobler', 'Naismith', 'Langmuir1' or
+'Langmuir2'. Default is 'Tobler'.}
+
+\item{v0}{(Optional) Speed at flat surface. If given it will normalise hiking
+function outputs to the value given.}
+
+\item{off.path}{(Optional) Boolean for Tobler hiking function. Default is FALSE.}
+
+\item{horseback}{(Optional) Boolean for Tobler hiking function.Default is FALSE.}
+
+\item{cutoff}{(Optional) If a value is given any slopes above the cutoff will output speed zero.}
 }
 \description{
-Tobler's Hiking Speed Function
+This function outputs the hiking speed in km/hr dependant on slope for a
+variety of functions (see below).
+}
+\examples{
+hiking.speed(20, fun='Tobler')
+hiking.speed(20, fun='Tobler', horseback=TRUE)
+hiking.speed(-10, fun='Langmuir1')
+plot(seq(-20,20,1), hiking.speed(seq(-20,20,1), fun='Langmuir1'))
+
+dem <- raster::raster(system.file("external/test.grd", package="raster"))
+slope <- raster::terrain(dem)
+speed1 <- hiking.speed(slope)
+speed2 <- hiking.speed(slope, fun='Naismith')
+}
+\references{
+Sethian, J.A. (1996), A fast marching level set method for
+monotonically advancing fronts, \emph{Proc. Natl. Acad. Sci.} 93 (4),
+1591-1595.
+
+Tobler, Waldo (1993), Three presentations on geographical analysis and modeling:
+Non-isotropic geographic modeling speculations on the geometry of geography global spatial
+analysis, \emph{Technical report. National center for geographic information and analysis} 93 (1).
+
+Naismith, W. W. (1892), Excursions: Cruach Ardran, Stobinian, and Ben More,
+\emph{Scottish Mountaineering Club Journal} 2 (3): 136.
+
+Langmuir, Eric (1984), \emph{ Mountaincraft and Leadership: Official Handbook of the
+Mountain Leader Training Boards of Great Britain and Northern Ireland}. Edinburgh Scotland: Britain
+& Scottish Sports Council. (Langmuir1)
+
+Langmuir, Eric (2013). \emph{ Mountaincraft and Leadership: A Handbook for Mountaineers
+and Hillwalking Leaders in the British Isles (Fourth ed.)}. Mountain Training England; Mountain Training Scotland.
 }

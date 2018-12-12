@@ -4,7 +4,7 @@
 \alias{spFastHike}
 \title{Runs the spatial version of the Modified Fast Hiking Method}
 \usage{
-spFastHike(dem, seeds, spatial.res)
+spFastHike(dem, seeds, spatial.res, fun = "Tobler")
 }
 \arguments{
 \item{dem}{A \code{\link[raster]{raster}} object of chosen dimension
@@ -12,43 +12,27 @@ and resolution with elevation data.}
 
 \item{seeds}{A \code{\link[sp]{SpatialPointsDataFrame}} object containing
 the incept time and rate-of-spread for each of the n seeds in its data.frame,
- in columns named exactly \emph{incept} (for incept time) and \emph{speed} (
- for rate-of-spread).
+ in a colums named exactly \emph{incept} (for incept time), \emph{off.path}
+ (see Tobler's function).
 This object will be automatically transformed to the projection of \emph{domain}.}
 
 \item{spatial.res}{(Optional) Spatial resolution of the raster in metres.
 Defaults to that of the raster used for DEM}
+
+\item{fun}{(Optional) Hiking function to use, See \link{hiking.speed} for details.}
 }
 \description{
-This function runs the Modified Fast Hiking Method of xxxxxxx
- from \emph{sp} and \emph{raster} objects and outputs results
-in the same formats, makin it more convenient for (geo)spatial analyses
-and simulation. Output arrival time is in hours.
+This function runs the Modified Fast Hiking Method from \emph{sp} and
+\emph{raster} objects and outputs results in the same formats, making
+it more convenient for (geo)spatial analyses and simulation. Output
+arrival time is in hours.
 }
 \examples{
 library(raster); library(sp); library(rgdal)
 domain <- raster(system.file("external/test.grd", package="raster")) # sample raster
 coords <- cbind(c(179000,181200), c(330000, 333000)) # coordinates for seeds
-seed.df <- data.frame(incept=c(0,10), off.track=c(F,F), horseback=c(F,F)) # incept time and speed for each seed
+seed.df <- data.frame(incept=c(0,1)) # parameters for each seed
 seeds <- SpatialPointsDataFrame(coords, seed.df, proj4string=crs(domain))
 
 fm <- spFastHike(domain, seeds)
-par(mfrow=c(1,3))
-plot(fm$process, main='process')
-plot(fm$arrival.time, main='arrival time')
-plot(fm$cost.distance, main='distance')
-}
-\references{
-Sethian, J.A. (1996), A fast marching level set method for
-monotonically advancing fronts, \emph{Proc. Natl. Acad. Sci.} 93 (4),
-1591-1595, doi:
-
-Silva, F. and Steele, J. (2012), Modeling Boundaries Between
-Converging Fronts in Prehistory, \emph{Advances in Complex Systems},
- 15(1-2), 1150005, doi: 10.1142/S0219525911003293
-
-Silva, F. and Steele, J. (2014), New methods for reconstructing
-geographical effects on dispersal rates and routes from large-scale
-radiocarbon databases, \emph{Journal of Archaeological Science} 52,
-609-620, doi: 10.1016/j.jas.2014.04.021
 }
