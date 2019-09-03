@@ -11,10 +11,10 @@ spFastHike(dem, seeds, spatial.res, fun = "Tobler")
 and resolution with elevation data.}
 
 \item{seeds}{A \code{\link[sp]{SpatialPointsDataFrame}} object containing
-the incept time and rate-of-spread for each of the n seeds in its data.frame,
- in a colums named exactly \emph{incept} (for incept time), \emph{off.path}
- (see Tobler's function).
-This object will be automatically transformed to the projection of \emph{domain}.}
+parameter values for each of the n seeds in its data.frame,
+ in colums named exactly \emph{incept} (for incept time), \emph{off.path},
+ \emph{horseback} (see Tobler's function). This object will be automatically
+  transformed to the projection of \emph{domain}.}
 
 \item{spatial.res}{(Optional) Spatial resolution of the raster in metres.
 Defaults to that of the raster used for DEM}

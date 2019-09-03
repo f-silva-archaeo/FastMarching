@@ -12,7 +12,7 @@ for every grid cell. Values above 1 will boost diffusivity, below 1 will
 inhibit it. Values of 0 should mark cells that block diffusion.}
 
 \item{seeds}{A (4 x n) array containing the x-coordinate, y-coordinate,
-incept time and rate-of-spread for each of the n seeds.}
+incept time and  \emph{hiking.speed} parameters for each of the n seeds.}
 
 \item{spatial.res}{(Optional) Spatial resolution of the grid in metre.
 See example below. Defaults to 1 metre.}

@@ -59,6 +59,11 @@ hiking.speed <- function(slope, units='degree', fun='Tobler', v0=NULL, off.path=
     speed <- factor * exp(-3.5 * abs(slp + 0.05))
   } else
 
+    if (fun=='ToblerMod') {
+      if (!is.null(v0)) { factor <- v0/exp(-5.3 * abs(0.03)) } else { factor <- 4.8 }
+      speed <- factor * exp(-5.3 * abs(0.7*slp + 0.03))
+    } else
+
     if (fun=='Naismith') {
       if (missing(v0)) { v0 <- 4.83 }
 
@@ -110,7 +115,8 @@ hiking.speed <- function(slope, units='degree', fun='Tobler', v0=NULL, off.path=
 
 #' Gridded Modified Fast Hiking Method
 #' @noRd
-ModFastHiking <- function(domain, seeds, spatial.res=1, fun) {
+#' @export
+ModFastHiking <- function(domain, seeds, spatial.res, fun) {
 
   # Initializations ---------------------------------------------------------
   temp.res <- 1000    # temporal resolution
@@ -120,7 +126,6 @@ ModFastHiking <- function(domain, seeds, spatial.res=1, fun) {
 
 
   # Seed cleanup ------------------------------------------------------------
-  V <- 1*(temp.res/spatial.res)# unneeded
   if ("v0" %in% names(seeds)) { v0 <- seeds$v0 } else { v0 <- rep(NULL,NROW(seeds)) }
   if ("off.path" %in% names(seeds)) { off.path <- seeds$off.path } else { off.path <- rep(F,NROW(seeds)) }
   if ("horseback" %in% names(seeds)) { horseback <- seeds$horseback } else { horseback <- rep(F,NROW(seeds)) }
@@ -163,9 +168,9 @@ ModFastHiking <- function(domain, seeds, spatial.res=1, fun) {
 
           if ((i > 0) && (j > 0) && (i <= dim(T)[1]) && (j <= dim(T)[2]) && (Frozen[i,j]==0)) {
             process[i,j] <- process[x[kk], y[kk]]
-            slope <- (Map[i,j] - Map[x[kk],y[kk]]) / (spatial.res*1000)
-            speed <- hiking.speed(slope, units='nounit', fun=fun, v0=v0[process[i,j]], off.path=off.path[process[i,j]], horseback=horseback[process[i,j]])*(temp.res/spatial.res)
-            Tt <- seeds[3,seed.id] + 1/(speed)
+            slope <- (Map[i,j] - Map[x[kk],y[kk]]) / spatial.res
+            speed <- hiking.speed(slope, units='nounit', fun=fun, v0=v0[process[i,j]], off.path=off.path[process[i,j]], horseback=horseback[process[i,j]])*temp.res
+            Tt <- seeds[3,seed.id] + spatial.res/(speed*1000)
 
             if (T[i,j] > 0) {
               Narrow_list[1,T[i,j]] <- min(Re(Tt),Narrow_list[1,T[i,j]])
@@ -251,18 +256,18 @@ ModFastHiking <- function(domain, seeds, spatial.res=1, fun) {
         if(ch1&&ch2) { Tm2[4] <- min((4*Tpatch[2,4] - Tpatch[1,5])/3, (4*Tpatch[4,2] - Tpatch[5,1])/3); Order[4] <- 2}
 
         # calculates hiking speed to all neighbours
-        slope.xy <- (Map[i,j] - Map[x,y]) / (spatial.res*1000)
-        speed.xy <- hiking.speed(slope.xy, units='nounit', fun=fun, v0=v0[process[x,y]], off.path=off.path[process[x,y]], horseback=horseback[process[x,y]])*(temp.res/spatial.res)
-        slope.cross <- (Map[i,j] - Map[x,y]) / (sqrt(2*(spatial.res*1000)^2))
-        speed.cross <- hiking.speed(slope.cross, units='nounit', fun=fun, v0=v0[process[x,y]], off.path=off.path[process[x,y]], horseback=horseback[process[x,y]])*(temp.res/spatial.res)
+        slope.xy <- (Map[i,j] - Map[x,y]) / spatial.res
+        speed.xy <- hiking.speed(slope.xy, units='nounit', fun=fun, v0=v0[process[x,y]], off.path=off.path[process[x,y]], horseback=horseback[process[x,y]])*1000*temp.res
+        slope.cross <- (Map[i,j] - Map[x,y]) / (sqrt(2*spatial.res^2))
+        speed.cross <- hiking.speed(slope.cross, units='nounit', fun=fun, v0=v0[process[x,y]], off.path=off.path[process[x,y]], horseback=horseback[process[x,y]])*1000*temp.res
 
         # calculates the distance using x-y and cross directions only
-        Coeff <- c(0, 0, -1/(speed.xy^2));
-        for (t in 1:2) { if(Order[t] > 0) { Coeff <- switch(Order[t], Coeff+c(1, -2*Tm[t], Tm[t]^2), Coeff+c(1, -2*Tm2[t], Tm2[t]^2)*9/4) }}
+        Coeff <- c(0, 0, -1/(speed.xy^2))
+        for (t in 1:2) { if(Order[t] > 0) { Coeff <- switch(Order[t], Coeff + c(1, -2*Tm[t], Tm[t]^2), Coeff + c(1, -2*Tm2[t], Tm2[t]^2)*9/4) }}
         Tt <- polyroot(rev(Coeff)); Tt <- max(Re(Tt))
-
-        Coeff <- c(0, 0, -1/(speed.cross^2));
-        for (t in 3:4) { if(Order[t] > 0) { Coeff <- switch(Order[t], Coeff+0.5*c(1, -2*Tm[t], Tm[t]^2), Coeff+0.5*c(1, -2*Tm2[t], Tm2[t]^2)*9/4) }}
+        Coeff <- c(0, 0, -1/(speed.cross^2))
+        # Coeff <- c(0, 0, -1/(speed.xy^2))
+        for (t in 3:4) { if(Order[t] > 0) { Coeff <- switch(Order[t], Coeff + 0.5*c(1, -2*Tm[t], Tm[t]^2), Coeff + 0.5*c(1, -2*Tm2[t], Tm2[t]^2)*9/4) }}
         Tt2 <- polyroot(rev(Coeff))
 
         # Check for upwind condition
@@ -316,7 +321,7 @@ ModFastHiking <- function(domain, seeds, spatial.res=1, fun) {
 #'  for every grid cell. Values above 1 will boost diffusivity, below 1 will
 #'  inhibit it. Values of 0 should mark cells that block diffusion.
 #' @param seeds A (4 x n) array containing the x-coordinate, y-coordinate,
-#' incept time and rate-of-spread for each of the n seeds.
+#' incept time and  \emph{hiking.speed} parameters for each of the n seeds.
 #' @param spatial.res (Optional) Spatial resolution of the grid in metre.
 #' See example below. Defaults to 1 metre.
 #' @param fun (Optional) Hiking function to use, See \link{hiking.speed} for details.
@@ -371,10 +376,10 @@ gridFastHike <- function(domain, seeds, spatial.res=1, fun='Tobler') {
 #' @param dem A \code{\link[raster]{raster}} object of chosen dimension
 #' and resolution with elevation data.
 #' @param seeds A \code{\link[sp]{SpatialPointsDataFrame}} object containing
-#' the incept time and rate-of-spread for each of the n seeds in its data.frame,
-#'  in a colums named exactly \emph{incept} (for incept time), \emph{off.path}
-#'  (see Tobler's function).
-#' This object will be automatically transformed to the projection of \emph{domain}.
+#' parameter values for each of the n seeds in its data.frame,
+#'  in colums named exactly \emph{incept} (for incept time), \emph{off.path},
+#'  \emph{horseback} (see Tobler's function). This object will be automatically
+#'   transformed to the projection of \emph{domain}.
 #' @param spatial.res (Optional) Spatial resolution of the raster in metres.
 #' Defaults to that of the raster used for DEM
 #' @param fun (Optional) Hiking function to use, See \link{hiking.speed} for details.
@@ -393,7 +398,7 @@ spFastHike <- function(dem, seeds, spatial.res, fun='Tobler') {
   # Convert Raster to Matrix ------------------------------------------------
   domain.grid <- raster::as.matrix(dem)
   domain.grid[is.na(domain.grid)] <- 0
-  if (missing(spatial.res)) { spatial.res <- mean(raster::res(dem))/1000 } # in km
+  if (missing(spatial.res)) { spatial.res <- mean(raster::res(dem)) } # in meters
 
 
   # Convert SpatialPointsDataFrame to seeds array ---------------------------

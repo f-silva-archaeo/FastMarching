@@ -136,10 +136,10 @@ ModFastMarching <- function(domain, seeds, spatial.res=1) {
         if(ch1&&ch2) { Tm2[4] <- min((4*Tpatch[2,4] - Tpatch[1,5])/3, (4*Tpatch[4,2] - Tpatch[5,1])/3); Order[4] <- 2}
 
         # calculates the distance using x-y and cross directions only
-        Coeff <- c(0, 0, -1/((V[process[x,y]]*Map[i,j])^2));
+        Coeff <- c(0, 0, -1/((V[process[x,y]]*Map[i,j])^2))
         for (t in 1:2) { if(Order[t] > 0) { Coeff <- switch(Order[t], Coeff+c(1, -2*Tm[t], Tm[t]^2), Coeff+c(1, -2*Tm2[t], Tm2[t]^2)*9/4) }}
         Tt <- polyroot(rev(Coeff)); Tt <- max(Re(Tt))
-        Coeff <- c(0, 0, -1/((V[process[x,y]]*Map[i,j])^2));
+        Coeff <- c(0, 0, -1/((V[process[x,y]]*Map[i,j])^2))
         for (t in 3:4) { if(Order[t] > 0) { Coeff <- switch(Order[t], Coeff+0.5*c(1, -2*Tm[t], Tm[t]^2), Coeff+0.5*c(1, -2*Tm2[t], Tm2[t]^2)*9/4) }}
         Tt2 <- polyroot(rev(Coeff))
 
@@ -302,7 +302,6 @@ spFastMarch <- function(domain, seeds, spatial.res) {
   seeds.matrix <- raster::as.matrix(raster::rasterize(seeds.rp, domain, background=NA)$ID)
   aux <- t(cbind(seeds.matrix[which(!is.na(seeds.matrix))], which(!is.na(seeds.matrix), arr.ind=TRUE)))
   aux <- rbind(aux, seeds.rp@data$incept, seeds.rp@data$speed); seeds.grid <- aux[-1,]
-
 
 
   # Check if seeds are inside domain ----------------------------------------
