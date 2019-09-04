@@ -2,7 +2,7 @@
 % Please edit documentation in R/FHM.R
 \name{spFastHike}
 \alias{spFastHike}
-\title{Modified Fast Hiking Method on a spatial domain}
+\title{Fast Hiking Method on a spatial domain}
 \usage{
 spFastHike(dem, seeds, spatial.res, fun = "Tobler")
 }
@@ -17,12 +17,12 @@ parameter values for each of the n seeds in its data.frame,
   transformed to the projection of \emph{domain}.}
 
 \item{spatial.res}{(Optional) Spatial resolution of the raster in metres.
-Defaults to that of the raster used for DEM}
+Defaults to that of the raster used.}
 
 \item{fun}{(Optional) Hiking function to use, See \link{hiking.speed} for details.}
 }
 \description{
-This function runs the Modified Fast Hiking Method from \emph{sp} and
+This function runs the Fast Hiking Method from \emph{sp} and
 \emph{raster} objects and outputs results in the same formats, making
 it more convenient for (geo)spatial analyses and simulation. Output
 arrival time is in hours.

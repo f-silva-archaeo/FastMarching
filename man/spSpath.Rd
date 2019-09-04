@@ -4,14 +4,16 @@
 \alias{spSpath}
 \title{Shortest Path on a spatial domain}
 \usage{
-spSpath(cdist, drop)
+spSpath(surface, droplet)
 }
 \arguments{
-\item{spatial.res}{(Optional) Spatial resolution of the raster in metres.}
+\item{surface}{A \code{\link[raster]{raster}} object with arrival times
+or \emph{fastmaRching} object.}
+
+\item{droplet}{A \code{\link[sp]{SpatialPointsDataFrame}} object with
+droplet location.}
 }
 \description{
-TODO description
-}
-\examples{
-
+This function returns the shortest-path from \emph{droplet} location to
+source of dispesal surface.
 }

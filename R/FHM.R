@@ -115,196 +115,90 @@ hiking.speed <- function(slope, units='degree', fun='Tobler', v0=NULL, off.path=
 
 #' Gridded Modified Fast Hiking Method
 #' @noRd
-#' @export
 ModFastHiking <- function(domain, seeds, spatial.res, fun) {
-
-  # Initializations ---------------------------------------------------------
-  temp.res <- 1000    # temporal resolution
-  Narrow_free <- 100000; Narrow_id <- 0; Narrow_list <- array(0,c(4,Narrow_free))   # Narrow Band arrays
-  ne <- rbind(c(-1,0),c(1,0),c(0,-1),c(0,1))    # neighbour pixels
-  clock <- 0    # external clock for seed inception
-
 
   # Seed cleanup ------------------------------------------------------------
   if ("v0" %in% names(seeds)) { v0 <- seeds$v0 } else { v0 <- rep(NULL,NROW(seeds)) }
   if ("off.path" %in% names(seeds)) { off.path <- seeds$off.path } else { off.path <- rep(F,NROW(seeds)) }
   if ("horseback" %in% names(seeds)) { horseback <- seeds$horseback } else { horseback <- rep(F,NROW(seeds)) }
   seeds <- t(seeds[,1:3])
-  seeds[3,] <- seeds[3,]/temp.res
+  seeds[3,] <- seeds[3,]
   incept <- matrix(c(1:(ncol(seeds)+1),c(seeds[3,],Inf)), nrow=2, byrow=TRUE) # incept times for seeds
 
 
   # Intialization of Fast Hiking grids ------------------------------------
-  Map <- domain
-  gridsize <- dim(Map)
-  T <- array(0,c(gridsize[1],gridsize[2]))
-  process <- array(0,c(gridsize[1],gridsize[2]))
-  Tm2 <- array(0,c(1,4))
+  Map <- matrix(NA, nrow=NROW(domain)+4, ncol=NCOL(domain)+4)
+  Map[3:(NROW(domain)+2), 3:(NCOL(domain)+2)] <- domain
+  Arrival <- matrix(Inf, nrow=NROW(Map), ncol=NCOL(Map))
   Frozen <- Map==0
+  TT <- Arrival
+  dist <- rbind( c(sqrt(8), sqrt(5), 2, sqrt(5), sqrt(8)),
+                 c(sqrt(5), sqrt(2), 1, sqrt(2), sqrt(5)),
+                 c(2,       1,       0, 1      , 2),
+                 c(sqrt(5), sqrt(2), 1, sqrt(2), sqrt(5)),
+                 c(sqrt(8), sqrt(5), 2, sqrt(5), sqrt(8)) )*spatial.res
 
+  dist <- rbind( c(Inf      , sqrt(5), Inf , sqrt(5), Inf),
+                 c(sqrt(5), sqrt(2), 1 , sqrt(2), sqrt(5)),
+                 c(Inf      ,       1, 0 , 1      , Inf),
+                 c(sqrt(5), sqrt(2), 1 , sqrt(2), sqrt(5)),
+                 c(Inf      , sqrt(5), Inf , sqrt(5), Inf))*spatial.res
 
-  # Fast Hiking Run -------------------------------------------------------
-  F1 <- length(which(Frozen==1))
+  # Incepts seeds to initiate processes at incept time ----------------------
+  ind <- seeds[1:2] + c(2,2)
+  Frozen[ind[1], ind[2]] <- 1
+
+  # Calculate arrival time for all neighbours (knight's move)
+  Patch <- Map[(ind[1]-2):(ind[1]+2), (ind[2]-2):(ind[2]+2)]
+  slope <- (Patch - Patch[3,3])/dist
+  speed <- hiking.speed(slope, 'nounit', fun, v0, off.path, horseback)*1000 # in metres per hour
+  time <- dist/speed
+  time[Frozen[(ind[1]-2):(ind[1]+2), (ind[2]-2):(ind[2]+2)]==1] <- NA
+  Arrival[(ind[1]-2):(ind[1]+2), (ind[2]-2):(ind[2]+2)] <- time
+
+  TT <- Arrival
+  TT[sort(TT, index.return=T, na.last=T)$ix] <- seq(1,length(Arrival))
+  TT[!is.finite(Arrival)] <- NA
+
+  # Loop through unitl boundary has covered entire domain
+  F1 <- length(which(Frozen == 1))
   pb <- utils::txtProgressBar(max=length(which(Frozen==0)), style=3)
-  while(Narrow_id > -1) {
+  while(sum(Frozen==0, na.rm=T) > 0) {
 
-    if(clock >= min(incept[2,])) {
-      # Incepts seeds to initiate processes at incept time ----------------------
+    ## Pick fastest pixel and make it current
+    ind <- which(TT==min(TT, na.rm=TRUE), arr.ind = TRUE)
+    TT[ind] <- NA
 
-      # choose seeds to incept
-      seed.id <- incept[1, which.min(incept[2,] - clock)]
-      seed.points <- floor( seeds[1:2,seed.id] );  dim(seed.points) <- c(2,length(seed.id))
+    Patch <- Map[(ind[1]-2):(ind[1]+2), (ind[2]-2):(ind[2]+2)]
+    slope <- (Patch - Patch[3,3])/dist
+    speed <- hiking.speed(slope, 'nounit', fun, v0, off.path, horseback)*1000 # in metres per hour
+    time <- dist/speed + Arrival[ind[1], ind[2]]
 
-      # incept seeds
-      x <- seed.points[1,]; y <- seed.points[2,]
-      for (kk in 1:length(seed.id)) {
-        Frozen[x[kk],y[kk]] <- 1
-        T[x[kk],y[kk]] <- seeds[3,seed.id]
-        process[x[kk],y[kk]] <- seed.id
+    Arrival2 <- matrix(NA, nrow=NROW(Map), ncol=NCOL(Map))
+    time[Frozen[(ind[1]-2):(ind[1]+2), (ind[2]-2):(ind[2]+2)]==1] <- NA
+    Arrival2[(ind[1]-2):(ind[1]+2), (ind[2]-2):(ind[2]+2)] <- time
 
-        # add neighbours of seeds to Narrow list
-        for (k in 1:4) {
-          i <- x[kk] + ne[k,1]; j <- y[kk] + ne[k,2]
+    ## Any smaller than Arrival, then this is better route
+    Arrival[which(Arrival2 < Arrival)] <- Arrival2[which(Arrival2 < Arrival)]
 
-          if ((i > 0) && (j > 0) && (i <= dim(T)[1]) && (j <= dim(T)[2]) && (Frozen[i,j]==0)) {
-            process[i,j] <- process[x[kk], y[kk]]
-            slope <- (Map[i,j] - Map[x[kk],y[kk]]) / spatial.res
-            speed <- hiking.speed(slope, units='nounit', fun=fun, v0=v0[process[i,j]], off.path=off.path[process[i,j]], horseback=horseback[process[i,j]])*temp.res
-            Tt <- seeds[3,seed.id] + spatial.res/(speed*1000)
+    Frozen[ind[1], ind[2]] <- 1
+    TT <- Arrival
+    TT[!is.finite(Arrival)] <- NA
+    TT[Frozen==1] <- NA
+    TT[sort(TT, index.return=T, na.last=T)$ix] <- seq(1,length(Arrival))
+    TT[!is.finite(Arrival)] <- NA
+    TT[Frozen==1] <- NA
+    ## TODO clean up above
 
-            if (T[i,j] > 0) {
-              Narrow_list[1,T[i,j]] <- min(Re(Tt),Narrow_list[1,T[i,j]])
-              Narrow_list[4,T[i,j]] <- process[x[kk],y[kk]]
-            } else {
-              Narrow_id <- Narrow_id + 1
-              if (Narrow_id > Narrow_free) { Narrow_free <- Narrow_free + 100000; Narrow_list[1,Narrow_free] <- 0 }
-              Narrow_list[,Narrow_id] <- rbind( Re(Tt), i, j, process[x[kk],y[kk]] )
-              T[i,j] <- Narrow_id
-            }
-          }
-        }
-      }
-      d <- dim(incept); d[2] <- d[2] - 1
-      incept <- incept[,-1]; dim(incept) <- d
-    }
-
-    # get the closest pixel to the wavefront and make it the current pixel
-    t <- min(Narrow_list[1,1:Narrow_id]); index <- which.min(c(Narrow_list[1,1:Narrow_id])); clock <- t
-    x <- Narrow_list[2,index]; y <- Narrow_list[3,index]
-    Frozen[x,y] <- 1
-    T[x,y] <- Narrow_list[1,index]
-    process[x,y] <- Narrow_list[4,index]
-
-    # replace min value with the last value in the array
-    if(index < Narrow_id) {
-      Narrow_list[,index] <- Narrow_list[,Narrow_id]
-      x2 <- Narrow_list[2,index]; y2 <-  Narrow_list[3,index]
-      T[x2,y2] <- index
-    }
-    Narrow_id <- Narrow_id - 1
-
-    # loop through neighbours of current pixel
-    for (k in 1:4) {
-      i <- x + ne[k,1]; j <- y + ne[k,2]
-
-      # check if neighbour is not yet frozen
-      if((i > 0) && (j > 0) && (i <= dim(T)[1]) && (j <= dim(T)[2]) && (Frozen[i,j]==0) && (process[i,j]==0)) {
-        Tpatch <- matrix(Inf,5,5)
-        for (nx in -2:2) {
-          for (ny in -2:2) {
-            i.n <- i + nx; j.n <- j + ny
-            if((i.n > 0) && (j.n > 0) && (i.n <= dim(T)[1]) && (j.n <= dim(T)[2]) && (Frozen[i.n,j.n]==1) && (process[i.n,j.n]==process[x,y])) {
-              Tpatch[nx+3,ny+3] <- T[i.n,j.n]
-            }
-          }
-        }
-
-        # stores the derivative order of derivative to use
-        Order <- array(0,c(1,4))
-
-        # First Order derivatives in x-y and cross directions
-        Tm <- array(0,c(1,4));
-        Tm[1] <- min(Tpatch[2,3],Tpatch[4,3]); if(is.finite(Tm[1])) { Order[1] <- 1 }
-        Tm[2] <- min(Tpatch[3,2],Tpatch[3,4]); if(is.finite(Tm[2])) { Order[2] <- 1 }
-        Tm[3] <- min(Tpatch[2,2],Tpatch[4,4]); if(is.finite(Tm[3])) { Order[3] <- 1 }
-        Tm[4] <- min(Tpatch[2,4],Tpatch[4,2]); if(is.finite(Tm[4])) { Order[4] <- 1 }
-
-        # Second Order derivatives
-        Tm2 <- array(0,c(1,4))
-        ch1 <- (Tpatch[1,3] < Tpatch[2,3]) && is.finite(Tpatch[2,3])
-        ch2 <- (Tpatch[5,3] < Tpatch[4,3]) && is.finite(Tpatch[4,3])
-        if(ch1) { Tm2[1] <- (4*Tpatch[2,3] - Tpatch[1,3])/3; Order[1] <- 2 }
-        if(ch2) { Tm2[1] <- (4*Tpatch[4,3] - Tpatch[5,3])/3; Order[1] <- 2 }
-        if(ch1&&ch2) { Tm2[1] <- min((4*Tpatch[2,3]-Tpatch[1,3])/3, (4*Tpatch[4,3] - Tpatch[5,3])/3); Order[1] <- 2 }
-
-        ch1 <- (Tpatch[3,1] < Tpatch[3,2]) && is.finite(Tpatch[3,2])
-        ch2 <- (Tpatch[3,5] < Tpatch[3,4]) && is.finite(Tpatch[3,4])
-        if(ch1) { Tm2[2] <- (4*Tpatch[3,2] - Tpatch[3,1])/3; Order[2] <- 2 }
-        if(ch2) { Tm2[2] <- (4*Tpatch[3,4] - Tpatch[3,5])/3; Order[2] <- 2 }
-        if(ch1&&ch2) { Tm2[2] <- min((4*Tpatch[3,2] - Tpatch[3,1])/3, (4*Tpatch[3,4] - Tpatch[3,5])/3); Order[2] <- 2}
-
-        ch1 <- (Tpatch[1,1] < Tpatch[2,2]) && is.finite(Tpatch[2,2])
-        ch2 <- (Tpatch[5,5] < Tpatch[4,4]) && is.finite(Tpatch[4,4])
-        if(ch1) { Tm2[3] <- (4*Tpatch[2,2] - Tpatch[1,1])/3; Order[3] <- 2 }
-        if(ch2) { Tm2[3] <- (4*Tpatch[4,4] - Tpatch[5,5])/3; Order[3] <- 2 }
-        if(ch1&&ch2) { Tm2[3] <- min((4*Tpatch[2,2] - Tpatch[1,1])/3, (4*Tpatch[4,4] - Tpatch[5,5])/3); Order[3] <- 2}
-
-        ch1 <- (Tpatch[1,5] < Tpatch[2,4]) && is.finite(Tpatch[2,4])
-        ch2 <- (Tpatch[5,1] < Tpatch[4,2]) && is.finite(Tpatch[4,2])
-        if(ch1) { Tm2[4] <- (4*Tpatch[2,4] - Tpatch[1,5])/3; Order[4] <- 2 }
-        if(ch2) { Tm2[4] <- (4*Tpatch[4,2] - Tpatch[5,1])/3; Order[4] <- 2 }
-        if(ch1&&ch2) { Tm2[4] <- min((4*Tpatch[2,4] - Tpatch[1,5])/3, (4*Tpatch[4,2] - Tpatch[5,1])/3); Order[4] <- 2}
-
-        # calculates hiking speed to all neighbours
-        slope.xy <- (Map[i,j] - Map[x,y]) / spatial.res
-        speed.xy <- hiking.speed(slope.xy, units='nounit', fun=fun, v0=v0[process[x,y]], off.path=off.path[process[x,y]], horseback=horseback[process[x,y]])*1000*temp.res
-        slope.cross <- (Map[i,j] - Map[x,y]) / (sqrt(2*spatial.res^2))
-        speed.cross <- hiking.speed(slope.cross, units='nounit', fun=fun, v0=v0[process[x,y]], off.path=off.path[process[x,y]], horseback=horseback[process[x,y]])*1000*temp.res
-
-        # calculates the distance using x-y and cross directions only
-        Coeff <- c(0, 0, -1/(speed.xy^2))
-        for (t in 1:2) { if(Order[t] > 0) { Coeff <- switch(Order[t], Coeff + c(1, -2*Tm[t], Tm[t]^2), Coeff + c(1, -2*Tm2[t], Tm2[t]^2)*9/4) }}
-        Tt <- polyroot(rev(Coeff)); Tt <- max(Re(Tt))
-        Coeff <- c(0, 0, -1/(speed.cross^2))
-        # Coeff <- c(0, 0, -1/(speed.xy^2))
-        for (t in 3:4) { if(Order[t] > 0) { Coeff <- switch(Order[t], Coeff + 0.5*c(1, -2*Tm[t], Tm[t]^2), Coeff + 0.5*c(1, -2*Tm2[t], Tm2[t]^2)*9/4) }}
-        Tt2 <- polyroot(rev(Coeff))
-
-        # Check for upwind condition
-        if(length(Tt2) > 0) { Tt2 <- max(Re(Tt2)); Tt <- min(Tt,Tt2) }
-        DirectNeigbInSol <- Tm[is.finite(Tm)]
-        if(length(which(DirectNeigbInSol>=Tt)) > 0) { Tt <- max(DirectNeigbInSol) + 1/(speed.xy) }
-
-        # Updates Narrow Band array
-        if(T[i,j] > 0) {
-          mT <- min(c(Tt, Narrow_list[1,T[i,j]])); ind <- which.min(c(Tt, Narrow_list[1,T[i,j]]))
-          Narrow_list[1,T[i,j]] <- Re(mT)
-          if (ind==1) { Narrow_list[4,T[i,j]] <- process[x,y] }
-        } else {
-          Narrow_id <- Narrow_id + 1
-          if(Narrow_id > Narrow_free) { Narrow_free <- Narrow_free + 100000; Narrow_list[1,Narrow_free]<- 0 }
-          Narrow_list[,Narrow_id] <- Re(c(Tt,i,j,process[x,y]))
-          T[i,j] <- Narrow_id
-        }
-      }
-    }
     utils::setTxtProgressBar(pb, length(which(Frozen==1))-F1)
   }
 
+  # cleanup
+  Arrival[!is.finite(Arrival)] <- 0
+  Arrival <- Arrival[3:(NROW(Arrival)-2), 3:(NCOL(Arrival)-2)]
 
   # Output ------------------------------------------------------------------
-  T <- T * temp.res
-  cdist <- T
-  for (i in 1:NROW(seeds[3,])) {
-    aux <- which(process==i)
-    cdist[aux] <- spatial.res*(cdist[aux] - seeds[3,i]*temp.res)
-  }
-
-  T[process==0] <- NA
-  cdist[process==0] <- NA
-  process[process==0] <- NA
-
-  out <- list(domain = domain, seeds = seeds, spatial.res = spatial.res, arrival.time = T, process = process, cost.distance = cdist)
+  out <- list(domain = domain, seeds = seeds, spatial.res = spatial.res, arrival.time = Arrival)
   class(out) <- 'fastmaRching'
 
   return(out)
@@ -313,9 +207,9 @@ ModFastHiking <- function(domain, seeds, spatial.res, fun) {
 
 
 
-#' Modified Fast Hiking Method on a gridded domain
+#' Fast Hiking Method on a gridded domain
 #'
-#' This function runs the Modified Fast Hiking Method on a gridded domain.
+#' This function runs the Fast Hiking Method on a gridded domain.
 #' Output arrival time is in hours.
 #' @param domain Grid (matrix) of chosen dimension with diffusivity values
 #'  for every grid cell. Values above 1 will boost diffusivity, below 1 will
@@ -323,7 +217,7 @@ ModFastHiking <- function(domain, seeds, spatial.res, fun) {
 #' @param seeds A (4 x n) array containing the x-coordinate, y-coordinate,
 #' incept time and  \emph{hiking.speed} parameters for each of the n seeds.
 #' @param spatial.res (Optional) Spatial resolution of the grid in metre.
-#' See example below. Defaults to 1 metre.
+#' See example below.
 #' @param fun (Optional) Hiking function to use, See \link{hiking.speed} for details.
 #' @export
 #' @examples
@@ -367,9 +261,9 @@ gridFastHike <- function(domain, seeds, spatial.res=1, fun='Tobler') {
 
 
 
-#' Modified Fast Hiking Method on a spatial domain
+#' Fast Hiking Method on a spatial domain
 #'
-#' This function runs the Modified Fast Hiking Method from \emph{sp} and
+#' This function runs the Fast Hiking Method from \emph{sp} and
 #' \emph{raster} objects and outputs results in the same formats, making
 #' it more convenient for (geo)spatial analyses and simulation. Output
 #' arrival time is in hours.
@@ -381,7 +275,7 @@ gridFastHike <- function(domain, seeds, spatial.res=1, fun='Tobler') {
 #'  \emph{horseback} (see Tobler's function). This object will be automatically
 #'   transformed to the projection of \emph{domain}.
 #' @param spatial.res (Optional) Spatial resolution of the raster in metres.
-#' Defaults to that of the raster used for DEM
+#' Defaults to that of the raster used.
 #' @param fun (Optional) Hiking function to use, See \link{hiking.speed} for details.
 #' @export
 #' @examples
@@ -423,15 +317,10 @@ spFastHike <- function(dem, seeds, spatial.res, fun='Tobler') {
 
   # Output ------------------------------------------------------------------
   TT <- raster::raster(fm$arrival.time, template=dem)
-  pp <- raster::raster(fm$process, template=dem)
-  cc <- raster::raster(fm$cost.distance, template=dem)
 
   fm$seeds <- seeds
   fm$domain <- dem
   fm$spatial.res <- spatial.res
   fm$arrival.time <- TT
-  fm$process <- pp
-  fm$cost.distance <- cc
-
   return(fm)
 }

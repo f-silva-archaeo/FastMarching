@@ -4,14 +4,17 @@
 \alias{gridSpath}
 \title{Shortest Path on a gridded domain}
 \usage{
-gridSpath(cdist, drop, spatial.res = 1)
+gridSpath(surface, droplet, spatial.res)
 }
 \arguments{
-\item{spatial.res}{(Optional) Spatial resolution of the grid in metres.}
+\item{surface}{Grid (matrix) of arrival times or \emph{fastmaRching} object.}
+
+\item{droplet}{Location of droplet}
+
+\item{spatial.res}{(Optional) Spatial resolution of the grid in metre.
+See example below.}
 }
 \description{
-TODO description
-}
-\examples{
-
+This function returns the shortest-path from \emph{droplet} location to
+source of dispesal surface.
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/FHM.R
 \name{gridFastHike}
 \alias{gridFastHike}
-\title{Modified Fast Hiking Method on a gridded domain}
+\title{Fast Hiking Method on a gridded domain}
 \usage{
 gridFastHike(domain, seeds, spatial.res = 1, fun = "Tobler")
 }
@@ -15,12 +15,12 @@ inhibit it. Values of 0 should mark cells that block diffusion.}
 incept time and  \emph{hiking.speed} parameters for each of the n seeds.}
 
 \item{spatial.res}{(Optional) Spatial resolution of the grid in metre.
-See example below. Defaults to 1 metre.}
+See example below.}
 
 \item{fun}{(Optional) Hiking function to use, See \link{hiking.speed} for details.}
 }
 \description{
-This function runs the Modified Fast Hiking Method on a gridded domain.
+This function runs the Fast Hiking Method on a gridded domain.
 Output arrival time is in hours.
 }
 \examples{
