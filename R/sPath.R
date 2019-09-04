@@ -70,7 +70,7 @@ spSpath <- function(surface, droplet) {
   droplet.mat <- raster::as.matrix(raster::rasterize(droplet.rp, surface, field=1, background=NA))
   aux <- t(cbind(droplet.mat[which(!is.na(droplet.mat))], which(!is.na(droplet.mat), arr.ind=TRUE))); droplet.mat <- aux[-1,]
 
-  sPath <- gridSpath(surface.mat, droplet.mat)
+  sPath <- gridSpath(surface.mat, droplet.mat, res(surface))
 
   mm <- matrix(NA,nrow=NROW(surface.mat), ncol=NCOL(surface.mat))
 

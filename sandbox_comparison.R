@@ -10,16 +10,23 @@ volc <- raster::raster(system.file("external/maungawhau.grd", package="gdistance
 values(volc) <- 100
 data(volc.loc)
 data(destin.loc)
-system.time(res.mc <- movecost(dtm=volc, origin=volc.loc, destin=destin.loc, breaks=0.05))
+res.mc <- movecost(dtm=volc, origin=volc.loc, destin=destin.loc, breaks=0.05)
 
 
 
 # fasthiking ------------------------------------------------------------
 #devtools::install_github('f-silva-archaeo/fastmaRching')
 library(fastmaRching)
-seeds <- volc.loc
-seeds@data <- data.frame(Id=0, incept=0, off.path=F)
-system.time(res.fh <- spFastHike(volc, seeds))
+# seeds <- volc.loc
+# seeds@data <- data.frame(Id=0, incept=0, off.path=F)
+# res.fh <- spFastHike(volc, seeds)
+
+
+seeds <- destin.loc
+seeds@data <- data.frame(Id=rep(0,9), incept=rep(0,9), off.path=rep(F,9))
+res.fh <- spFastHike(volc, seeds)
+
+ttt <- spSpath(res.fh$arrival.time, destin.loc[1])   ## TODO make this work
 
 
 
