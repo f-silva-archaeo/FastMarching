@@ -4,7 +4,7 @@
 \alias{hiking.speed}
 \title{Hiking Speed Function(s)}
 \usage{
-hiking.speed(slope, units = "degree", fun = "Tobler", v0 = NULL,
+hiking.speed(slope, units = "degree", fun = "Tobler", v0 = NA,
   off.path = F, horseback = F, cutoff)
 }
 \arguments{

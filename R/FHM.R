@@ -37,7 +37,7 @@
 #' speed1 <- hiking.speed(slope)
 #' speed2 <- hiking.speed(slope, fun='Naismith')
 
-hiking.speed <- function(slope, units='degree', fun='Tobler', v0=NULL, off.path=F, horseback=F, cutoff) {
+hiking.speed <- function(slope, units='degree', fun='Tobler', v0=NA, off.path=F, horseback=F, cutoff) {
   if (class(slope)=='RasterLayer') {
     #require(raster)
     r <- slope
@@ -53,14 +53,14 @@ hiking.speed <- function(slope, units='degree', fun='Tobler', v0=NULL, off.path=
 
 
   if (fun=='Tobler') {
-    if (!is.null(v0)) { factor <- v0/exp(-3.5 * abs(0.05)) } else { factor <- 6 }
+    if (!is.na(v0)) { factor <- v0/exp(-3.5 * abs(0.05)) } else { factor <- 6 }
     if (off.path) { factor <- factor * 3/5 }
     if (horseback) { factor <- factor * 5/4 }
     speed <- factor * exp(-3.5 * abs(slp + 0.05))
   } else
 
     if (fun=='ToblerMod') {
-      if (!is.null(v0)) { factor <- v0/exp(-5.3 * abs(0.03)) } else { factor <- 4.8 }
+      if (!is.na(v0)) { factor <- v0/exp(-5.3 * abs(0.03)) } else { factor <- 4.8 }
       speed <- factor * exp(-5.3 * abs(0.7*slp + 0.03))
     } else
 
@@ -77,7 +77,7 @@ hiking.speed <- function(slope, units='degree', fun='Tobler', v0=NULL, off.path=
     } else
 
       if (fun=='Langmuir1') {
-        if (is.null(v0)) { v0 <- 4.83 }
+        if (is.na(v0)) { v0 <- 4.83 }
 
         dx <- matrix(1,nrow=NROW(slp), ncol=NCOL(slp))
         dy <- slp
@@ -90,7 +90,7 @@ hiking.speed <- function(slope, units='degree', fun='Tobler', v0=NULL, off.path=
       }  else
 
         if (fun=='Langmuir2') {
-          if (is.null(v0)) { v0 <- 4 }
+          if (is.na(v0)) { v0 <- 4 }
 
           dx <- matrix(1,nrow=NROW(slp), ncol=NCOL(slp))
           dy <- slp
@@ -115,15 +115,14 @@ hiking.speed <- function(slope, units='degree', fun='Tobler', v0=NULL, off.path=
 
 #' Gridded Modified Fast Hiking Method
 #' @noRd
-ModFastHiking <- function(domain, seeds, spatial.res, fun) {
+ModFastHiking <- function(domain, seeds, spatial.res, fun, verbose=T) {
 
   # Seed cleanup ------------------------------------------------------------
-  if ("v0" %in% names(seeds)) { v0 <- seeds$v0 } else { v0 <- rep(NULL,NROW(seeds)) }
+  if ("v0" %in% names(seeds)) { v0 <- seeds$v0 } else { v0 <- rep(NA,NROW(seeds)) }
   if ("off.path" %in% names(seeds)) { off.path <- seeds$off.path } else { off.path <- rep(F,NROW(seeds)) }
   if ("horseback" %in% names(seeds)) { horseback <- seeds$horseback } else { horseback <- rep(F,NROW(seeds)) }
   seeds <- t(seeds[,1:3])
-  seeds[3,] <- seeds[3,]
-  incept <- matrix(c(1:(ncol(seeds)+1),c(seeds[3,],Inf)), nrow=2, byrow=TRUE) # incept times for seeds
+  seeds[3,] <- seeds[3,]  # incept times for seeds
 
 
   # Intialization of Fast Hiking grids ------------------------------------
@@ -132,37 +131,38 @@ ModFastHiking <- function(domain, seeds, spatial.res, fun) {
   Arrival <- matrix(Inf, nrow=NROW(Map), ncol=NCOL(Map))
   Frozen <- Map==0
   TT <- Arrival
+  process <- matrix(NA, NROW(TT), NCOL(TT))
   dist <- rbind( c(sqrt(8), sqrt(5), 2, sqrt(5), sqrt(8)),
                  c(sqrt(5), sqrt(2), 1, sqrt(2), sqrt(5)),
                  c(2,       1,       0, 1      , 2),
                  c(sqrt(5), sqrt(2), 1, sqrt(2), sqrt(5)),
                  c(sqrt(8), sqrt(5), 2, sqrt(5), sqrt(8)) )*spatial.res
 
-  dist <- rbind( c(Inf      , sqrt(5), Inf , sqrt(5), Inf),
-                 c(sqrt(5), sqrt(2), 1 , sqrt(2), sqrt(5)),
-                 c(Inf      ,       1, 0 , 1      , Inf),
-                 c(sqrt(5), sqrt(2), 1 , sqrt(2), sqrt(5)),
-                 c(Inf      , sqrt(5), Inf , sqrt(5), Inf))*spatial.res
-
   # Incepts seeds to initiate processes at incept time ----------------------
-  ind <- seeds[1:2] + c(2,2)
-  Frozen[ind[1], ind[2]] <- 1
+  plant <- which(seeds[3,]==0)
 
-  # Calculate arrival time for all neighbours (knight's move)
-  Patch <- Map[(ind[1]-2):(ind[1]+2), (ind[2]-2):(ind[2]+2)]
-  slope <- (Patch - Patch[3,3])/dist
-  speed <- hiking.speed(slope, 'nounit', fun, v0, off.path, horseback)*1000 # in metres per hour
-  time <- dist/speed
-  time[Frozen[(ind[1]-2):(ind[1]+2), (ind[2]-2):(ind[2]+2)]==1] <- NA
-  Arrival[(ind[1]-2):(ind[1]+2), (ind[2]-2):(ind[2]+2)] <- time
+  for (i in 1:length(plant)) {
+    ind <- seeds[1:2,plant[i]] + c(2,2)
+    Frozen[ind[1], ind[2]] <- 1
+    process[ind[1], ind[2]] <- plant[i]
+
+    # Calculate arrival time for all neighbours (knight's move)
+    Patch <- Map[(ind[1]-2):(ind[1]+2), (ind[2]-2):(ind[2]+2)]
+    slope <- (Patch - Patch[3,3])/dist
+    speed <- hiking.speed(slope, 'nounit', fun, v0[i], off.path[i], horseback[i])*1000 # in metres per hour
+    time <- dist/speed
+    time[Frozen[(ind[1]-2):(ind[1]+2), (ind[2]-2):(ind[2]+2)]==1] <- NA
+    Arrival[(ind[1]-2):(ind[1]+2), (ind[2]-2):(ind[2]+2)] <- time
+    process[(ind[1]-2):(ind[1]+2), (ind[2]-2):(ind[2]+2)] <- plant[i]
+  }
 
   TT <- Arrival
   TT[sort(TT, index.return=T, na.last=T)$ix] <- seq(1,length(Arrival))
   TT[!is.finite(Arrival)] <- NA
 
+
   # Loop through unitl boundary has covered entire domain
-  F1 <- length(which(Frozen == 1))
-  pb <- utils::txtProgressBar(max=length(which(Frozen==0)), style=3)
+  if (verbose) { F1 <- length(which(Frozen == 1)); pb <- utils::txtProgressBar(max=length(which(Frozen==0)), style=3) }
   while(sum(Frozen==0, na.rm=T) > 0) {
 
     ## Pick fastest pixel and make it current
@@ -171,7 +171,7 @@ ModFastHiking <- function(domain, seeds, spatial.res, fun) {
 
     Patch <- Map[(ind[1]-2):(ind[1]+2), (ind[2]-2):(ind[2]+2)]
     slope <- (Patch - Patch[3,3])/dist
-    speed <- hiking.speed(slope, 'nounit', fun, v0, off.path, horseback)*1000 # in metres per hour
+    speed <- hiking.speed(slope, 'nounit', fun, v0[process[ind[1], ind[2]]], off.path[process[ind[1], ind[2]]], horseback[process[ind[1], ind[2]]])*1000 # in metres per hour
     time <- dist/speed + Arrival[ind[1], ind[2]]
 
     Arrival2 <- matrix(NA, nrow=NROW(Map), ncol=NCOL(Map))
@@ -179,7 +179,9 @@ ModFastHiking <- function(domain, seeds, spatial.res, fun) {
     Arrival2[(ind[1]-2):(ind[1]+2), (ind[2]-2):(ind[2]+2)] <- time
 
     ## Any smaller than Arrival, then this is better route
+    process[which(Arrival2 < Arrival)] <- process[ind[1], ind[2]]
     Arrival[which(Arrival2 < Arrival)] <- Arrival2[which(Arrival2 < Arrival)]
+
 
     Frozen[ind[1], ind[2]] <- 1
     TT <- Arrival
@@ -190,15 +192,16 @@ ModFastHiking <- function(domain, seeds, spatial.res, fun) {
     TT[Frozen==1] <- NA
     ## TODO clean up above
 
-    utils::setTxtProgressBar(pb, length(which(Frozen==1))-F1)
+    if (verbose) { utils::setTxtProgressBar(pb, length(which(Frozen==1))-F1) }
   }
 
   # cleanup
   Arrival[!is.finite(Arrival)] <- 0
+  process <- process[3:(NROW(Arrival)-2), 3:(NCOL(Arrival)-2)]
   Arrival <- Arrival[3:(NROW(Arrival)-2), 3:(NCOL(Arrival)-2)]
 
   # Output ------------------------------------------------------------------
-  out <- list(domain = domain, seeds = seeds, spatial.res = spatial.res, arrival.time = Arrival)
+  out <- list(domain = domain, seeds = seeds, spatial.res = spatial.res, arrival.time = Arrival, process = process)
   class(out) <- 'fastmaRching'
 
   return(out)
@@ -219,44 +222,42 @@ ModFastHiking <- function(domain, seeds, spatial.res, fun) {
 #' @param spatial.res (Optional) Spatial resolution of the grid in metre.
 #' See example below.
 #' @param fun (Optional) Hiking function to use, See \link{hiking.speed} for details.
+#' @param verbose (Optional) Boolean to control verbose output.
 #' @export
 #' @examples
 #' # Single process
 #' grid <- matrix(1,10,10)
 #' seed <- data.frame(row=5, col=5, incept=0)
-#' fm <- gridFastHike(grid, seed)
-#' image(fm$arrival.time)
+#' fh <- gridFastHike(grid, seed, verbose=FALSE)
+#' image(fh$arrival.time)
 #'
 #' # Two processes with same incept time
 #' seeds <- data.frame(row=c(7,2), col=c(7,2), incept=c(0,0))
-#' fm2 <- gridFastHike(grid, seeds)
-#' par(mfrow=c(1,3))
-#' image(fm2$process, main='process')
-#' image(fm2$arrival.time, main='arrival time')
-#' image(fm2$cost.distance, main='distance')
+#' fh2 <- gridFastHike(grid, seeds, verbose=FALSE)
+#' par(mfrow=c(1,2))
+#' image(fh2$process, main='process')
+#' image(fh2$arrival.time, main='arrival time')
 #'
 #' # Same as before but changing spatial.res parameter
-#' fm3 <- gridFastHike(grid, seeds, spatial.res=10)
+#' fh3 <- gridFastHike(grid, seeds, spatial.res=10, verbose=FALSE)
 #'
 #' # Same as before but with a barrier in middle
 #' grid[5,2:9] <- 0
-#' fm4 <- gridFastHike(grid, seeds, spatial.res=10)
-#' par(mfrow=c(1,3))
-#' image(fm4$process, main='process')
-#' image(fm4$arrival.time, main='arrival time')
-#' image(fm4$cost.distance, main='distance')
+#' fh4 <- gridFastHike(grid, seeds, spatial.res=10, verbose=FALSE)
+#' par(mfrow=c(1,2))
+#' image(fh4$process, main='process')
+#' image(fh4$arrival.time, main='arrival time')
 #'
-#' # Same as before but with different incept times and speeds
-#' seeds <- data.frame(row=c(7,2), col=c(7,2), incept=c(0,1), v0=c(2,5))
-#' fm5 <- gridFastHike(grid, seeds, spatial.res=10)
-#' par(mfrow=c(1,3))
-#' image(fm5$process, main='process')
-#' image(fm5$arrival.time, main='arrival time')
-#' image(fm5$cost.distance, main='distance')
-gridFastHike <- function(domain, seeds, spatial.res=1, fun='Tobler') {
+#' # Same as before but with different speeds
+#' seeds <- data.frame(row=c(7,2), col=c(7,2), incept=c(0,0), v0=c(2,5))
+#' fh5 <- gridFastHike(grid, seeds, spatial.res=10, verbose=FALSE)
+#' par(mfrow=c(1,2))
+#' image(fh5$process, main='process')
+#' image(fh5$arrival.time, main='arrival time')
+gridFastHike <- function(domain, seeds, spatial.res=1, fun='Tobler', verbose) {
   compiler::enableJIT(3)
   gFH <- compiler::cmpfun(ModFastHiking)
-  return(gFH(domain, seeds, spatial.res, fun))
+  return(gFH(domain, seeds, spatial.res, fun, verbose))
 }
 
 
@@ -277,18 +278,20 @@ gridFastHike <- function(domain, seeds, spatial.res=1, fun='Tobler') {
 #' @param spatial.res (Optional) Spatial resolution of the raster in metres.
 #' Defaults to that of the raster used.
 #' @param fun (Optional) Hiking function to use, See \link{hiking.speed} for details.
+#' @param verbose (Optional) Boolean to control verbose output.
 #' @export
 #' @examples
 #' library(raster); library(sp); library(rgdal)
 #' domain <- raster(system.file("external/test.grd", package="raster")) # sample raster
 #' coords <- cbind(c(179000,181200), c(330000, 333000)) # coordinates for seeds
-#' seed.df <- data.frame(incept=c(0,1)) # parameters for each seed
+#' seed.df <- data.frame(Id= c(1,2), incept=c(0,0)) # parameters for each seed
 #' seeds <- SpatialPointsDataFrame(coords, seed.df, proj4string=crs(domain))
 #'
-#' fm <- spFastHike(domain, seeds)
-#  plot(domain)
-#  contour(fm$arrival.time, levels=seq(1,5,1), add=T)
-spFastHike <- function(dem, seeds, spatial.res, fun='Tobler') {
+#' fh <- spFastHike(domain, seeds, verbose=FALSE)
+#' par(mfrow=c(1,2), mar=c(1,1,1,3))
+#' plot(domain); contour(fh$arrival.time, levels=seq(0.1,.5,0.2), add=TRUE)
+#' plot(fh$process); contour(fh$arrival.time, levels=seq(0.1,.5,0.2), add=TRUE)
+spFastHike <- function(dem, seeds, spatial.res, fun='Tobler', verbose=T) {
   # Convert Raster to Matrix ------------------------------------------------
   domain.grid <- raster::as.matrix(dem)
   domain.grid[is.na(domain.grid)] <- 0
@@ -296,14 +299,15 @@ spFastHike <- function(dem, seeds, spatial.res, fun='Tobler') {
 
 
   # Convert SpatialPointsDataFrame to seeds array ---------------------------
+  seeds.data <- seeds@data; seeds@data <- data.frame(Id=seeds@data$Id)
   seeds.rp <- sp::spTransform(seeds, raster::crs(dem))
   seeds.matrix <- raster::as.matrix(raster::rasterize(seeds.rp, dem, background=NA)$ID)
   aux <- t(cbind(seeds.matrix[which(!is.na(seeds.matrix))], which(!is.na(seeds.matrix), arr.ind=TRUE))); aux <- aux[-1,]
   dim(aux) <- c(NROW(aux), NCOL(aux))
-  seeds.grid <- data.frame(row=aux[1,], col=aux[2,], incept=seeds.rp@data$incept)
-  if ("v0" %in% names(seeds.rp@data)) { seeds.grid$v0 <- seeds.rp@data$v0 }
-  if ("off.path" %in% names(seeds.rp@data)) { seeds.grid$off.path <- seeds.rp@data$off.path }
-  if ("horseback" %in% names(seeds.rp@data)) { seeds.grid$horseback <- seeds.rp@data$horseback }
+  seeds.grid <- data.frame(row=aux[1,], col=aux[2,], incept=seeds.data$incept)
+  if ("v0" %in% names(seeds.data)) { seeds.grid$v0 <- seeds.data$v0 }
+  if ("off.path" %in% names(seeds.data)) { seeds.grid$off.path <- seeds.data$off.path }
+  if ("horseback" %in% names(seeds.data)) { seeds.grid$horseback <- seeds.data$horseback }
 
 
   # Check if seeds are inside domain ----------------------------------------
@@ -312,15 +316,18 @@ spFastHike <- function(dem, seeds, spatial.res, fun='Tobler') {
 
 
   # Run Fast Hiking Method ------------------------------------------------
-  fm <- gridFastHike(domain.grid, seeds.grid, spatial.res, fun)
+  fh <- gridFastHike(domain.grid, seeds.grid, spatial.res, fun, verbose)
 
 
   # Output ------------------------------------------------------------------
-  TT <- raster::raster(fm$arrival.time, template=dem)
+  TT <- raster::raster(fh$arrival.time, template=dem)
+  proc <- raster::raster(fh$process, template=dem)
 
-  fm$seeds <- seeds
-  fm$domain <- dem
-  fm$spatial.res <- spatial.res
-  fm$arrival.time <- TT
-  return(fm)
+  out <- c()
+  out$seeds <- seeds
+  out$domain <- dem
+  out$spatial.res <- spatial.res
+  out$arrival.time <- TT
+  out$process <- proc
+  return(out)
 }

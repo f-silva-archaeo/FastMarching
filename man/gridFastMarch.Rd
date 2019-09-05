@@ -4,7 +4,7 @@
 \alias{gridFastMarch}
 \title{Modified Fast Marching Method on a gridded domain}
 \usage{
-gridFastMarch(domain, seeds, spatial.res = 1)
+gridFastMarch(domain, seeds, spatial.res = 1, verbose = T)
 }
 \arguments{
 \item{domain}{Grid (matrix) of chosen dimension with diffusivity values
@@ -16,6 +16,8 @@ incept time and rate-of-spread for each of the n seeds.}
 
 \item{spatial.res}{(Optional) Spatial resolution of the grid, necessary only
 to correct the rate-of-spread unit. See example below. Defaults to 1.}
+
+\item{verbose}{(Optional) Boolean to control verbose output.}
 }
 \description{
 This function runs the Modified Fast Marching Method of Silva and Steele
@@ -25,23 +27,23 @@ This function runs the Modified Fast Marching Method of Silva and Steele
 # Single process
 grid <- matrix(1,10,10)
 seed <- c(5,5,0,1)
-fm <- gridFastMarch(grid, seed)
+fm <- gridFastMarch(grid, seed, verbose=FALSE)
 image(fm$arrival.time)
 
 # Two processes with same incept time
 seeds <- cbind(c(7,7,0,1),c(2,2,0,1))
-fm2 <- gridFastMarch(grid, seeds)
+fm2 <- gridFastMarch(grid, seeds, verbose=FALSE)
 par(mfrow=c(1,3))
 image(fm2$process, main='process')
 image(fm2$arrival.time, main='arrival time')
 image(fm2$cost.distance, main='distance')
 
 # Same as before but changing spatial.res parameter
-fm3 <- gridFastMarch(grid, seeds, spatial.res=10)
+fm3 <- gridFastMarch(grid, seeds, spatial.res=10, verbose=FALSE)
 
 # Same as before but with a barrier in middle
 grid[5,2:9] <- 0
-fm4 <- gridFastMarch(grid, seeds, spatial.res=10)
+fm4 <- gridFastMarch(grid, seeds, spatial.res=10, verbose=FALSE)
 par(mfrow=c(1,3))
 image(fm4$process, main='process')
 image(fm4$arrival.time, main='arrival time')
@@ -49,7 +51,7 @@ image(fm4$cost.distance, main='distance')
 
 # Same as before but with different incept times and speeds
 seeds <- cbind(c(7,7,0,1),c(2,2,1,0.5))
-fm5 <- gridFastMarch(grid, seeds, spatial.res=10)
+fm5 <- gridFastMarch(grid, seeds, spatial.res=10, verbose=FALSE)
 par(mfrow=c(1,3))
 image(fm5$process, main='process')
 image(fm5$arrival.time, main='arrival time')

@@ -4,7 +4,7 @@
 \alias{gridFastHike}
 \title{Fast Hiking Method on a gridded domain}
 \usage{
-gridFastHike(domain, seeds, spatial.res = 1, fun = "Tobler")
+gridFastHike(domain, seeds, spatial.res = 1, fun = "Tobler", verbose)
 }
 \arguments{
 \item{domain}{Grid (matrix) of chosen dimension with diffusivity values
@@ -18,6 +18,8 @@ incept time and  \emph{hiking.speed} parameters for each of the n seeds.}
 See example below.}
 
 \item{fun}{(Optional) Hiking function to use, See \link{hiking.speed} for details.}
+
+\item{verbose}{(Optional) Boolean to control verbose output.}
 }
 \description{
 This function runs the Fast Hiking Method on a gridded domain.
@@ -27,33 +29,30 @@ Output arrival time is in hours.
 # Single process
 grid <- matrix(1,10,10)
 seed <- data.frame(row=5, col=5, incept=0)
-fm <- gridFastHike(grid, seed)
-image(fm$arrival.time)
+fh <- gridFastHike(grid, seed, verbose=FALSE)
+image(fh$arrival.time)
 
 # Two processes with same incept time
 seeds <- data.frame(row=c(7,2), col=c(7,2), incept=c(0,0))
-fm2 <- gridFastHike(grid, seeds)
-par(mfrow=c(1,3))
-image(fm2$process, main='process')
-image(fm2$arrival.time, main='arrival time')
-image(fm2$cost.distance, main='distance')
+fh2 <- gridFastHike(grid, seeds, verbose=FALSE)
+par(mfrow=c(1,2))
+image(fh2$process, main='process')
+image(fh2$arrival.time, main='arrival time')
 
 # Same as before but changing spatial.res parameter
-fm3 <- gridFastHike(grid, seeds, spatial.res=10)
+fh3 <- gridFastHike(grid, seeds, spatial.res=10, verbose=FALSE)
 
 # Same as before but with a barrier in middle
 grid[5,2:9] <- 0
-fm4 <- gridFastHike(grid, seeds, spatial.res=10)
-par(mfrow=c(1,3))
-image(fm4$process, main='process')
-image(fm4$arrival.time, main='arrival time')
-image(fm4$cost.distance, main='distance')
+fh4 <- gridFastHike(grid, seeds, spatial.res=10, verbose=FALSE)
+par(mfrow=c(1,2))
+image(fh4$process, main='process')
+image(fh4$arrival.time, main='arrival time')
 
-# Same as before but with different incept times and speeds
-seeds <- data.frame(row=c(7,2), col=c(7,2), incept=c(0,1), v0=c(2,5))
-fm5 <- gridFastHike(grid, seeds, spatial.res=10)
-par(mfrow=c(1,3))
-image(fm5$process, main='process')
-image(fm5$arrival.time, main='arrival time')
-image(fm5$cost.distance, main='distance')
+# Same as before but with different speeds
+seeds <- data.frame(row=c(7,2), col=c(7,2), incept=c(0,0), v0=c(2,5))
+fh5 <- gridFastHike(grid, seeds, spatial.res=10, verbose=FALSE)
+par(mfrow=c(1,2))
+image(fh5$process, main='process')
+image(fh5$arrival.time, main='arrival time')
 }

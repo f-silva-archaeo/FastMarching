@@ -4,7 +4,7 @@
 \alias{spFastHike}
 \title{Fast Hiking Method on a spatial domain}
 \usage{
-spFastHike(dem, seeds, spatial.res, fun = "Tobler")
+spFastHike(dem, seeds, spatial.res, fun = "Tobler", verbose = T)
 }
 \arguments{
 \item{dem}{A \code{\link[raster]{raster}} object of chosen dimension
@@ -20,6 +20,8 @@ parameter values for each of the n seeds in its data.frame,
 Defaults to that of the raster used.}
 
 \item{fun}{(Optional) Hiking function to use, See \link{hiking.speed} for details.}
+
+\item{verbose}{(Optional) Boolean to control verbose output.}
 }
 \description{
 This function runs the Fast Hiking Method from \emph{sp} and
@@ -31,8 +33,11 @@ arrival time is in hours.
 library(raster); library(sp); library(rgdal)
 domain <- raster(system.file("external/test.grd", package="raster")) # sample raster
 coords <- cbind(c(179000,181200), c(330000, 333000)) # coordinates for seeds
-seed.df <- data.frame(incept=c(0,1)) # parameters for each seed
+seed.df <- data.frame(Id= c(1,2), incept=c(0,0)) # parameters for each seed
 seeds <- SpatialPointsDataFrame(coords, seed.df, proj4string=crs(domain))
 
-fm <- spFastHike(domain, seeds)
+fh <- spFastHike(domain, seeds, verbose=FALSE)
+par(mfrow=c(1,2), mar=c(1,1,1,3))
+plot(domain); contour(fh$arrival.time, levels=seq(0.1,.5,0.2), add=TRUE)
+plot(fh$process); contour(fh$arrival.time, levels=seq(0.1,.5,0.2), add=TRUE)
 }

@@ -1,6 +1,6 @@
 #' Gridded Modified Fast Marching Method
 #' @noRd
-ModFastMarching <- function(domain, seeds, spatial.res=1) {
+ModFastMarching <- function(domain, seeds, spatial.res=1, verbose=T) {
 
 # Initializations ---------------------------------------------------------
   temp.res <- 1000    # temporal resolution
@@ -26,8 +26,7 @@ ModFastMarching <- function(domain, seeds, spatial.res=1) {
 
 
 # Fast Marching Run -------------------------------------------------------
-  F1 <- length(which(Frozen==1))
-  pb <- utils::txtProgressBar(max=length(which(Frozen==0)), style=3)
+  if (verbose) { F1 <- length(which(Frozen==1)); pb <- utils::txtProgressBar(max=length(which(Frozen==0)), style=3) }
   while(Narrow_id > -1) {
 
     if(clock >= min(incept[2,])) {
@@ -161,7 +160,7 @@ ModFastMarching <- function(domain, seeds, spatial.res=1) {
         }
       }
     }
-    utils::setTxtProgressBar(pb, length(which(Frozen==1))-F1)
+    if (verbose) { utils::setTxtProgressBar(pb, length(which(Frozen==1))-F1) }
   }
 
 
@@ -197,6 +196,7 @@ ModFastMarching <- function(domain, seeds, spatial.res=1) {
 #' incept time and rate-of-spread for each of the n seeds.
 #' @param spatial.res (Optional) Spatial resolution of the grid, necessary only
 #' to correct the rate-of-spread unit. See example below. Defaults to 1.
+#' @param verbose (Optional) Boolean to control verbose output.
 #' @references Sethian, J.A. (1996), A fast marching level set method for
 #' monotonically advancing fronts, \emph{Proc. Natl. Acad. Sci.} 93 (4),
 #' 1591-1595.
@@ -212,23 +212,23 @@ ModFastMarching <- function(domain, seeds, spatial.res=1) {
 #' # Single process
 #' grid <- matrix(1,10,10)
 #' seed <- c(5,5,0,1)
-#' fm <- gridFastMarch(grid, seed)
+#' fm <- gridFastMarch(grid, seed, verbose=FALSE)
 #' image(fm$arrival.time)
 #'
 #' # Two processes with same incept time
 #' seeds <- cbind(c(7,7,0,1),c(2,2,0,1))
-#' fm2 <- gridFastMarch(grid, seeds)
+#' fm2 <- gridFastMarch(grid, seeds, verbose=FALSE)
 #' par(mfrow=c(1,3))
 #' image(fm2$process, main='process')
 #' image(fm2$arrival.time, main='arrival time')
 #' image(fm2$cost.distance, main='distance')
 #'
 #' # Same as before but changing spatial.res parameter
-#' fm3 <- gridFastMarch(grid, seeds, spatial.res=10)
+#' fm3 <- gridFastMarch(grid, seeds, spatial.res=10, verbose=FALSE)
 #'
 #' # Same as before but with a barrier in middle
 #' grid[5,2:9] <- 0
-#' fm4 <- gridFastMarch(grid, seeds, spatial.res=10)
+#' fm4 <- gridFastMarch(grid, seeds, spatial.res=10, verbose=FALSE)
 #' par(mfrow=c(1,3))
 #' image(fm4$process, main='process')
 #' image(fm4$arrival.time, main='arrival time')
@@ -236,15 +236,15 @@ ModFastMarching <- function(domain, seeds, spatial.res=1) {
 #'
 #' # Same as before but with different incept times and speeds
 #' seeds <- cbind(c(7,7,0,1),c(2,2,1,0.5))
-#' fm5 <- gridFastMarch(grid, seeds, spatial.res=10)
+#' fm5 <- gridFastMarch(grid, seeds, spatial.res=10, verbose=FALSE)
 #' par(mfrow=c(1,3))
 #' image(fm5$process, main='process')
 #' image(fm5$arrival.time, main='arrival time')
 #' image(fm5$cost.distance, main='distance')
-gridFastMarch <- function(domain, seeds, spatial.res=1) {
+gridFastMarch <- function(domain, seeds, spatial.res=1, verbose=T) {
   compiler::enableJIT(3)
   gFM <- compiler::cmpfun(ModFastMarching)
-  return(gFM(domain, seeds, spatial.res))
+  return(gFM(domain, seeds, spatial.res, verbose))
 }
 
 
@@ -266,6 +266,7 @@ gridFastMarch <- function(domain, seeds, spatial.res=1) {
 #' This object will be automatically transformed to the projection of \emph{domain}.
 #' @param spatial.res (Optional) Spatial resolution of the raster, necessary only
 #' to correct the rate-of-spread unit. Defaults to that of the raster used for domain.
+#' @param verbose (Optional) Boolean to control verbose output.
 #' @references Sethian, J.A. (1996), A fast marching level set method for
 #' monotonically advancing fronts, \emph{Proc. Natl. Acad. Sci.} 93 (4),
 #' 1591-1595, doi:
@@ -285,12 +286,12 @@ gridFastMarch <- function(domain, seeds, spatial.res=1) {
 #' seed.df <- data.frame(incept=c(0,10), speed=c(.1,.1)) # incept time and speed for each seed
 #' seeds <- SpatialPointsDataFrame(coords, seed.df, proj4string=crs(domain))
 #'
-#' fm <- spFastMarch(domain, seeds)
+#' fm <- spFastMarch(domain, seeds, verbose=FALSE)
 #' par(mfrow=c(1,3))
 #' plot(fm$process, main='process')
 #' plot(fm$arrival.time, main='arrival time')
 #' plot(fm$cost.distance, main='distance')
-spFastMarch <- function(domain, seeds, spatial.res) {
+spFastMarch <- function(domain, seeds, spatial.res, verbose=T) {
   # Convert Raster to Matrix ------------------------------------------------
   domain.grid <- raster::as.matrix(domain)
   domain.grid[is.na(domain.grid)] <- 0
@@ -310,7 +311,7 @@ spFastMarch <- function(domain, seeds, spatial.res) {
 
 
   # Run Fast Marching Method ------------------------------------------------
-  fm <- gridFastMarch(domain.grid, seeds.grid, spatial.res)
+  fm <- gridFastMarch(domain.grid, seeds.grid, spatial.res, verbose)
 
 
   # Output ------------------------------------------------------------------

@@ -1,7 +1,7 @@
 Package: fastmaRching
 Type: Package
 Title: Fast Marching method for modelling evolving boundaries, competing dispersal processes and cost surfaces
-Version: 1.4.9000
+Version: 1.5.9000
 Author: Fabio Silva
 Maintainer: Fabio Silva <fsilva@bournemouth.ac.uk>
 Description: Fast Marching Method (FMM) for modelling evolving boundaries. First developed by Sethian (1996) <http://www.pnas.org/content/93/4/1591.short>, further extended by including a second-order approximation, the first-arrival rule, additive weights, and non-homogeneous domains following Silva and Steele (2012) <doi:10.1142/S0219525911003293> and Silva and Steele (2014) <doi:10.1016/j.jas.2014.04.021>.

@@ -4,7 +4,7 @@
 \alias{spFastMarch}
 \title{Modified Fast Marching Method on a spatial domain}
 \usage{
-spFastMarch(domain, seeds, spatial.res)
+spFastMarch(domain, seeds, spatial.res, verbose = T)
 }
 \arguments{
 \item{domain}{A \code{\link[raster]{raster}} object of chosen dimension
@@ -20,6 +20,8 @@ This object will be automatically transformed to the projection of \emph{domain}
 
 \item{spatial.res}{(Optional) Spatial resolution of the raster, necessary only
 to correct the rate-of-spread unit. Defaults to that of the raster used for domain.}
+
+\item{verbose}{(Optional) Boolean to control verbose output.}
 }
 \description{
 This function runs the Modified Fast Marching Method of Silva and Steele
@@ -35,7 +37,7 @@ coords <- cbind(c(179000,181200), c(330000, 333000)) # coordinates for seeds
 seed.df <- data.frame(incept=c(0,10), speed=c(.1,.1)) # incept time and speed for each seed
 seeds <- SpatialPointsDataFrame(coords, seed.df, proj4string=crs(domain))
 
-fm <- spFastMarch(domain, seeds)
+fm <- spFastMarch(domain, seeds, verbose=FALSE)
 par(mfrow=c(1,3))
 plot(fm$process, main='process')
 plot(fm$arrival.time, main='arrival time')
